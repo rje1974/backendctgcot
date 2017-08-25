@@ -35,8 +35,8 @@ class Credential(models.Model):
         wsaa.HOMO = True
         wsaa.DEBUG = True
         import ipdb; ipdb.set_trace()
-        cert = '/home/hugo/desarrollo/juaneduardoriva/cotctg/cotctg/media/user_2/ctg.crt' 
-        key = '/home/hugo/desarrollo/juaneduardoriva/cotctg/cotctg/media/user_2/privada.key'
+        cert = 'ctg.crt' 
+        key = 'privada.key'
         self.wsaa_token = wsaa.Autenticar("wsctg", cert, key, debug=True)
         self.save()
         return self.wsaa_token

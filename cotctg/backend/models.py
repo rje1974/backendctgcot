@@ -9,6 +9,7 @@ from django.core.validators import MaxValueValidator
 from django.dispatch.dispatcher import receiver
 from django.db.models.signals import post_save
 from django.utils import timezone
+from cotctg.backend.constants import WSAA_WSDL, WSAA_URL
 
 
 def user_directory_path(instance, filename):
@@ -17,7 +18,7 @@ def user_directory_path(instance, filename):
 
 
 class Credencial(models.Model):
-    usuario = models.OneToOneField(User, on_delete=models.CASCADE)
+    usuario = models.OneToOneField(User, on_delete=models.CASCADE, related_name='credenciales')
     key = models.FileField('Clave Privada', upload_to=user_directory_path)
     certificado = models.FileField('Certificado', upload_to=user_directory_path)
     certificado_texto = models.TextField('Text de Certificado', blank=True)
@@ -35,14 +36,15 @@ class Credencial(models.Model):
         pass
     
     @classmethod
-    def get_auth_token(self):
+    def obtener_afip_token(self):
+        cert = '/home/hugo/development/cotctg/cotctg/backend/ctg.crt' 
+        key = '/home/hugo/development/cotctg/cotctg/backend/privada.key'
         wsaa = WSAA()
         wsaa.HOMO = HOMO
         wsaa.DEBUG = DEBUG
-        cert = 'ctg.crt' 
-        key = 'privada.key'
+        wsaa.WSDL = WSAA_WSDL
+        wsaa.WSAAURL = WSAA_URL
         self.wsaa_token = wsaa.Autenticar("wsctg", cert, key, debug=DEBUG)
-        self.save()
         return self.wsaa_token
 
 
@@ -107,6 +109,9 @@ class CTG(models.Model):
     errores = models.CharField('Errores', blank=True, null=True, max_length=200)
     controles = models.CharField('Controles', blank=True, null=True, max_length=200)
     
+    def has_related_object(self, related_name):
+        return hasattr(self, related_name)
+    
     def __unicode__(self):
         return "Ctg: {}, Estado: {}".format(self.numero_ctg, self.estado)
     
@@ -125,7 +130,7 @@ class Operacion(models.Model):
         (3, 'Anular CTG')
     )
     fecha = models.DateTimeField('Fecha de Operacion', default=timezone.now)
-    tipo_operacion = models.CharField('Tipo de Operacion', choices=TIPO_OPERACION)
+    tipo_operacion = models.CharField('Tipo de Operacion', choices=TIPO_OPERACION, max_length=20)
     ctg = models.ForeignKey(CTG, null=True)
     
     def __unicode__(self):
@@ -136,16 +141,80 @@ class Operacion(models.Model):
         verbose_name_plural = 'Operaciones'
     
         
+class Cosecha(models.Model):
+    codigo = models.PositiveIntegerField('Codigo')
+    descripcion = models.CharField('Descripcion', max_length=100)
+    
+    def __unicode__(self):
+        return self.descripcion
+    
+    class Meta:
+        verbose_name = 'Cosecha'
+        verbose_name_plural = 'Cosechas'
+        
+
+class Especie(models.Model):
+    codigo = models.PositiveIntegerField('Codigo')
+    descripcion = models.CharField('Descripcion', max_length=100)
+    
+    def __unicode__(self):
+        return self.descripcion
+    
+    class Meta:
+        verbose_name = 'Especie'
+        verbose_name_plural = 'Especies'
+
+
+class Establecimiento(models.Model):
+    codigo = models.PositiveIntegerField('Codigo')
+    descripcion = models.CharField('Descripcion', max_length=100)
+    
+    def __unicode__(self):
+        return self.descripcion
+    
+    class Meta:
+        verbose_name = 'Establecimiento'
+        verbose_name_plural = 'Establecimientos'
+        
+        
+class Provincia(models.Model):
+    codigo = models.PositiveIntegerField('Codigo')
+    nombre = models.CharField('Descripcion', max_length=100)
+    
+    def __unicode__(self):
+        return self.descripcion
+    
+    class Meta:
+        verbose_name = 'Provincia'
+        verbose_name_plural = 'Provincias'
+        
+    
+class Localidad(models.Model):
+    provincia = models.ForeignKey(Provincia)
+    codigo = models.PositiveIntegerField('Codigo')
+    nombre = models.CharField('Descripcion', max_length=100)
+    
+    def __unicode__(self):
+        return self.descripcion
+    
+    class Meta:
+        verbose_name = 'Localidad'
+        verbose_name_plural = 'Localidades'
+        
+        
+        
 @receiver(post_save, sender=CTG)
 def solicitar_ctg_inicial(instance, **kwargs):
-    token = instance.usuario_solicitante.credential.get_auth_token()
+    token = instance.usuario_solicitante.credenciales.obtener_afip_token()
     wsctg = WSCTG()
     wsctg.Conectar()
     wsctg.SetTicketAcceso(token)
     wsctg.Cuit = CUIT_SOLICITANTE
-    import ipdb; ipdb.set_trace()
     
+    cuit_transportista = instance.cuit_transportista.cuit if instance.has_related_object('ctg_transportista') else None
+    cuit_corredor = instance.cuit_corredor.cuit if instance.has_related_object('ctg_corredor') else None
     '''
+    # guardar estos datos
     print "Observiacion: ", wsctg.Observaciones
     print "Fecha y Hora", wsctg.FechaHora
     print "Vigencia Desde", wsctg.VigenciaDesde
@@ -157,7 +226,7 @@ def solicitar_ctg_inicial(instance, **kwargs):
     cuit_canjeador = ''
     
     
-    wsctg.SolicitarCTGInicial(instance.numero_carta_de_porte, 
+    numero_ctg = wsctg.SolicitarCTGInicial(instance.numero_carta_de_porte, 
                               instance.codigo_especie, 
                               cuit_canjeador, 
                               cuit_destino, 

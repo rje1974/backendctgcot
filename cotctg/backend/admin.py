@@ -2,9 +2,16 @@
 from __future__ import unicode_literals
 
 from django.contrib import admin
-from .models import Credential, Company, CTG
+from .models import Entidad, Credencial, CTG
+from .models import Especie, Cosecha, Localidad, Establecimiento,\
+    Provincia
 
 # Register your models here.
-admin.site.register(Credential)
-admin.site.register(Company)
+admin.site.register(Credencial)
+admin.site.register(Entidad)
 admin.site.register(CTG)
+admin.site.register(Especie)
+admin.site.register(Cosecha)
+admin.site.register(Establecimiento)
+admin.site.register(Provincia)
+admin.site.register(Localidad)

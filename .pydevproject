@@ -8,4 +8,8 @@
 <pydev_pathproperty name="org.python.pydev.PROJECT_EXTERNAL_SOURCE_PATH">
 <path>/home/hugo/desarrollo/env/cot/lib/python2.7/site-packages</path>
 </pydev_pathproperty>
+<pydev_variables_property name="org.python.pydev.PROJECT_VARIABLE_SUBSTITUTION">
+<key>DJANGO_MANAGE_LOCATION</key>
+<value>cotctg/manage.py</value>
+</pydev_variables_property>
 </pydev_project>

@@ -4,6 +4,11 @@ from django.contrib.auth.models import User
 from django.db import models
 from pyafipws.wsaa import WSAA
 from pyafipws.wsctg import WSCTG
+from .constants import HOMO, DEBUG, CUIT_SOLICITANTE
+from django.core.validators import MaxValueValidator
+from django.dispatch.dispatcher import receiver
+from django.db.models.signals import post_save
+from django.utils import timezone
 
 
 def user_directory_path(instance, filename):
@@ -11,11 +16,11 @@ def user_directory_path(instance, filename):
     return 'user_{0}/{1}'.format(instance.user.id, filename)
 
 
-class Credential(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+class Credencial(models.Model):
+    usuario = models.OneToOneField(User, on_delete=models.CASCADE)
     key = models.FileField('Clave Privada', upload_to=user_directory_path)
-    certificate = models.FileField('Certificado', upload_to=user_directory_path)
-    certificate_text = models.TextField('Text de Certificado', blank=True)
+    certificado = models.FileField('Certificado', upload_to=user_directory_path)
+    certificado_texto = models.TextField('Text de Certificado', blank=True)
     wsaa_token = models.FileField('Token WSAA (TA)', blank=True)
 
     class Meta:
@@ -32,25 +37,25 @@ class Credential(models.Model):
     @classmethod
     def get_auth_token(self):
         wsaa = WSAA()
-        wsaa.HOMO = True
-        wsaa.DEBUG = True
-        import ipdb; ipdb.set_trace()
+        wsaa.HOMO = HOMO
+        wsaa.DEBUG = DEBUG
         cert = 'ctg.crt' 
         key = 'privada.key'
-        self.wsaa_token = wsaa.Autenticar("wsctg", cert, key, debug=True)
+        self.wsaa_token = wsaa.Autenticar("wsctg", cert, key, debug=DEBUG)
         self.save()
         return self.wsaa_token
 
-class Company(models.Model):
-    COMPANY_TYPE = ((1, 'Empresa de Origen'),
-                    (2, 'Empresa de Destino'))
-    
-    
-    nombre = models.CharField('Nombre de Empresa', max_length=120)
-    cuit = models.CharField('CUIT', max_length=20)
-    company_type = models.IntegerField('Tipo de Empresa', choices=COMPANY_TYPE)
-    default = models.BooleanField('Marcar como Principal', default=False)
-    
+
+class Entidad(models.Model):
+    ACTUA_COMO = ((1, 'Remitente Comercial'),
+                (2, 'Destino'),
+                (3, 'Destinatario'),
+                (4, 'Corredor'),
+                (5, 'Transportista'),)
+    usuario_solicitante = models.ManyToManyField(User, verbose_name='Usuario Solicitante')
+    nombre = models.CharField('Nombre de Entidad', max_length=120)
+    cuit = models.PositiveIntegerField('CUIT', validators=[MaxValueValidator(99999999999)])
+    actua_como = models.IntegerField('Actúa como', choices=ACTUA_COMO)
     
     def __unicode__(self):
         return self.nombre
@@ -69,16 +74,18 @@ class CTG(models.Model):
         (2, 'Generado'),
         (3, 'Datos Pendientes'),
         (4, 'Anulado'),
-        (5, 'Arribado'))
+        (5, 'Arribado')
+    )
     
     usuario_solicitante = models.ForeignKey(User, verbose_name='Usuario Solicitante')
-    numero_carta_de_porte = models.CharField('Nro Carta de Porte', max_length=50)
-    numero_ctg = models.CharField('Nro CTG', max_length=50, blank=True)
-    cuit_canjeador = models.ForeignKey(Company, verbose_name='Cuit Canjeador', related_name='ctg_cajeador', blank=True)
-    cuit_destino = models.ForeignKey(Company, verbose_name='Cuit Destino', related_name='ctg_destino')
-    cuit_destinatario = models.ForeignKey(Company, verbose_name='Cuit Destinatario', related_name='ctg_destinatario')
-    cuit_transportista = models.ForeignKey(Company, verbose_name='Cuit Tranportista', blank=True, related_name='ctg_transportista') 
-    cuit_corredor = models.ForeignKey(Company, verbose_name='Cuit Corredor', blank=True, related_name='ctg_corredor')
+    numero_carta_de_porte = models.PositiveIntegerField('Nro Carta de Porte', validators=[MaxValueValidator(999999999999)])
+    cuit_remitente = models.ForeignKey(Entidad, verbose_name='Cuit Remitente Comercial', related_name='ctg_remitente')
+    remitente_comercial_como_canjeador = models.BooleanField('Rte Comercial actua como Canjeador?', default=False)
+    remitente_comercial_como_productor = models.BooleanField('Rte Comercial actua como Productor?', default=False)
+    cuit_destino = models.ForeignKey(Entidad, verbose_name='Cuit Destino', related_name='ctg_destino')
+    cuit_destinatario = models.ForeignKey(Entidad, verbose_name='Cuit Destinatario', related_name='ctg_destinatario')
+    cuit_transportista = models.ForeignKey(Entidad, verbose_name='Cuit Tranportista', blank=True, related_name='ctg_transportista') 
+    cuit_corredor = models.ForeignKey(Entidad, verbose_name='Cuit Corredor', blank=True, related_name='ctg_corredor')
     codigo_localidad_origen = models.PositiveIntegerField('Codigo Localidad Origen')
     codigo_localidad_destino = models.PositiveIntegerField('Codigo Localidad Destino')
     codigo_cosecha = models.PositiveIntegerField('Codigo Cosecha')
@@ -86,25 +93,86 @@ class CTG(models.Model):
     cant_horas = models.PositiveIntegerField('Cantidad de Horas', blank=True)
     patente_vehiculo = models.CharField('Patente Vehiculo', max_length=30, blank=True)
     km_a_recorrer = models.PositiveIntegerField('Km a Recorrer', blank=True)
-    remitente_comercial_como_canjeador = models.CharField('Remitente comercial Canjeador', max_length=100, blank=True) 
-    remitente_comercial_como_productor = models.CharField('Remitente comercial Canjeador', max_length=100, blank=True) 
+    #remitente_comercial_como_canjeador = models.CharField('Remitente comercial Canjeador', max_length=100, blank=True) 
+    #remitente_comercial_como_productor = models.CharField('Remitente comercial Canjeador', max_length=100, blank=True) 
     turno = models.CharField('Turno', max_length=50, blank=True)
     estado = models.IntegerField('Estado del CTG', choices=CTG_ESTADO, default=1)
-    fecha = models.DateField('Fecha de Obtencion del CTG', blank=True)
     geolocalizacion = models.CharField('Geo Localizacion de la Solicitud', blank=True, max_length=150)
-    
+    numero_ctg = models.CharField('Nro CTG', max_length=50, blank=True)
+    observaciones = models.CharField('Observaciones', blank=True, null=True, max_length=200)
+    fechahora = models.CharField('Fecha y Hora', blank=True, null=True, max_length=200)
+    vigenciadesde = models.CharField('Vigencia Desde', blank=True, null=True, max_length=200)
+    vigenciahasta = models.CharField('Vigencia Hasta', blank=True, null=True, max_length=200)
+    tarifareferencia = models.CharField('Tarifa Referencia', blank=True, null=True, max_length=200)
+    errores = models.CharField('Errores', blank=True, null=True, max_length=200)
+    controles = models.CharField('Controles', blank=True, null=True, max_length=200)
     
     def __unicode__(self):
         return "Ctg: {}, Estado: {}".format(self.numero_ctg, self.estado)
     
-    def save(self, **kwargs):
-        token = self.usuario_solicitante.credential.get_auth_token()
-        wsctg = WSCTG()
-        wsctg.Conectar()
-        wsctg.SetTicketAcceso(token)
-        #wsctg.Cuit = CUIT
-        return models.Model.save(self, **kwargs)
-    
     class Meta:
         verbose_name = 'CTG'
         verbose_name_plural = 'CTGs'
+        
+    
+class Operacion(models.Model):
+    '''
+    Representa todas las operacion ante AFIP realizadas por el usuario
+    '''    
+    TIPO_OPERACION = (
+        (1, 'Solicitud CTG desde Inicio'),
+        (2, 'Solicitud CTG dato Pendiente'),
+        (3, 'Anular CTG')
+    )
+    fecha = models.DateTimeField('Fecha de Operacion', default=timezone.now)
+    tipo_operacion = models.CharField('Tipo de Operacion', choices=TIPO_OPERACION)
+    ctg = models.ForeignKey(CTG, null=True)
+    
+    def __unicode__(self):
+        return self.tipo_operacion
+    
+    class Meta:
+        verbose_name = 'Operacion'
+        verbose_name_plural = 'Operaciones'
+    
+        
+@receiver(post_save, sender=CTG)
+def solicitar_ctg_inicial(instance, **kwargs):
+    token = instance.usuario_solicitante.credential.get_auth_token()
+    wsctg = WSCTG()
+    wsctg.Conectar()
+    wsctg.SetTicketAcceso(token)
+    wsctg.Cuit = CUIT_SOLICITANTE
+    import ipdb; ipdb.set_trace()
+    
+    '''
+    print "Observiacion: ", wsctg.Observaciones
+    print "Fecha y Hora", wsctg.FechaHora
+    print "Vigencia Desde", wsctg.VigenciaDesde
+    print "Vigencia Hasta", wsctg.VigenciaHasta
+    print "Tarifa Referencia: ", wsctg.TarifaReferencia
+    print "Errores:", wsctg.Errores
+    print "Controles:", wsctg.Controles
+    
+    cuit_canjeador = ''
+    
+    
+    wsctg.SolicitarCTGInicial(instance.numero_carta_de_porte, 
+                              instance.codigo_especie, 
+                              cuit_canjeador, 
+                              cuit_destino, 
+                              cuit_destinatario, 
+                              instance.codigo_localidad_origen, 
+                              instance.codigo_localidad_destino, 
+                              instance.codigo_cosecha, 
+                              instance.peso_neto_carga, 
+                              instance.cant_horas, 
+                              instance.patente_vehiculo, 
+                              cuit_transportista, 
+                              instance.km_a_recorrer, 
+                              remitente_comercial_como_canjeador, 
+                              cuit_corredor, 
+                              remitente_comercial_como_productor, 
+                              instance.turno)
+
+    '''

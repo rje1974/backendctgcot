@@ -6,8 +6,8 @@ Created on 31 ago. 2017
 from django.core.management.base import BaseCommand
 from django.contrib.auth.models import User
 from pyafipws.wsctg import WSCTG
-from cotctg.backend.constants import CUIT_SOLICITANTE
-from cotctg.backend.models import Cosecha, Especie, Establecimiento, Provincia,\
+from backend.constants import CUIT_SOLICITANTE
+from backend.models import Cosecha, Especie, Establecimiento, Provincia,\
     Localidad
 
 
@@ -23,6 +23,12 @@ class Command(BaseCommand):
         wsctg.SetTicketAcceso(token)
         wsctg.Cuit = CUIT_SOLICITANTE
         sep = ','
+        self.stdout.write('Borrando datos pre existentes')
+        Cosecha.objects.all().delete()
+        Especie.objects.all().delete()
+        Establecimiento.objects.all().delete()
+        Localidad.objects.all().delete()
+        Provincia.objects.all().delete()
         
         self.stdout.write('Cargando cosechas')
         # Carga de Cosechas
@@ -51,18 +57,18 @@ class Command(BaseCommand):
             descripcion = establecimiento[2].strip()
             Establecimiento.objects.create(codigo=codigo, descripcion=descripcion)
 
-        self.stdout.write('Cargando Provincias')
+        self.stdout.write('Cargando Provincias y Localidades')
         # Carga de Provincias y Localidades
         provincias = wsctg.ConsultarProvincias(sep=sep)
         for provincia in provincias:
             provincia = provincia.split(sep)
             codigo = provincia[1].strip()
             nombre = provincia[2].strip()
-            Provincia.objects.create(codigo=codigo, nombre=nombre)
+            obj_provincia = Provincia.objects.create(codigo=codigo, nombre=nombre)
             localidades = wsctg.ConsultarLocalidadesPorProvincia(codigo_provincia=codigo, sep=sep)
             for localidad in localidades:
                 localidad = localidad.split(sep)
                 codigo = localidad[1].strip()
                 nombre = localidad[2].strip()
-                Localidad.objects.create(provincia=provincia, codigo=codigo, nombre=nombre)
+                Localidad.objects.create(provincia=obj_provincia, codigo=codigo, nombre=nombre)
         self.stdout.write('Datos Importados con Exito')

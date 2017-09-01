@@ -117,6 +117,54 @@ class CTG(models.Model):
     def __unicode__(self):
         return "Ctg: {}, Estado: {}".format(self.numero_ctg, self.estado)
     
+    def save(self, **kwargs):
+        obj = self
+        token = obj.usuario_solicitante.credenciales.obtener_afip_token()
+        wsctg = WSCTG()
+        wsctg.HOMO = HOMO
+        wsctg.WSDL = WSCTG_WSDL
+        wsctg.Conectar()
+        wsctg.SetTicketAcceso(token)
+        wsctg.Cuit = CUIT_SOLICITANTE
+        
+        cuit_transportista = obj.cuit_transportista.cuit if obj.cuit_transportista else None 
+        cuit_corredor = obj.cuit_corredor.cuit if obj.cuit_corredor else None 
+        cuit_remitente = obj.cuit_remitente.cuit if obj.cuit_remitente else None 
+        remitente_comercial_como_canjeador = cuit_canjeador = cuit_remitente if obj.remitente_comercial_como_canjeador else None 
+        remitente_comercial_como_productor = cuit_canjeador = cuit_remitente if obj.remitente_comercial_como_productor else None 
+        
+        remitente_comercial_como_canjeador = ''
+        remitente_comercial_como_productor = ''
+        
+        numero_ctg = wsctg.SolicitarCTGInicial(obj.numero_carta_de_porte, 
+                                              obj.codigo_especie.codigo,
+                                              cuit_canjeador, 
+                                              obj.cuit_destino.cuit, 
+                                              obj.cuit_destinatario.cuit, 
+                                              obj.codigo_localidad_origen.codigo, 
+                                              obj.codigo_localidad_destino.codigo, 
+                                              obj.codigo_cosecha.codigo, 
+                                              obj.peso_neto_carga, 
+                                              obj.cant_horas, 
+                                              obj.patente_vehiculo, 
+                                              cuit_transportista, 
+                                              obj.km_a_recorrer, 
+                                              str(remitente_comercial_como_canjeador), 
+                                              cuit_corredor, 
+                                              str(remitente_comercial_como_productor), 
+                                              obj.turno)
+        obj.numero_ctg = numero_ctg
+        obj.observaciones = wsctg.Observaciones
+        obj.fechahora = wsctg.FechaHora
+        obj.vigenciadesde = wsctg.VigenciaDesde
+        obj.vigenciahasta = wsctg.VigenciaHasta
+        obj.tarifareferencia = wsctg.TarifaReferencia
+        obj.errores = wsctg.Errores
+        obj.controles = wsctg.Controles
+        
+        #Operacion.objects.create(ctg=obj, tipo_operacion=1)
+        return models.Model.save(obj, **kwargs)
+    
     class Meta:
         verbose_name = 'CTG'
         verbose_name_plural = 'CTGs'
@@ -205,9 +253,10 @@ class Localidad(models.Model):
         
         
     
-        
+'''
 @receiver(post_save, sender=CTG)
 def solicitar_ctg_inicial(**kwargs):
+    pass
     obj = kwargs['instance']
     token = obj.usuario_solicitante.credenciales.obtener_afip_token()
     wsctg = WSCTG()
@@ -223,8 +272,10 @@ def solicitar_ctg_inicial(**kwargs):
     remitente_comercial_como_canjeador = cuit_canjeador = cuit_remitente if obj.remitente_comercial_como_canjeador else None 
     remitente_comercial_como_productor = cuit_canjeador = cuit_remitente if obj.remitente_comercial_como_productor else None 
     
-    import ipdb; ipdb.set_trace()
-    numero_ctg = wsctg.SolicitarCTGInicial(str(obj.numero_carta_de_porte), 
+    remitente_comercial_como_canjeador = ''
+    remitente_comercial_como_productor = ''
+    
+    numero_ctg = wsctg.SolicitarCTGInicial(obj.numero_carta_de_porte, 
                                           obj.codigo_especie.codigo,
                                           cuit_canjeador, 
                                           obj.cuit_destino.cuit, 
@@ -237,9 +288,9 @@ def solicitar_ctg_inicial(**kwargs):
                                           obj.patente_vehiculo, 
                                           cuit_transportista, 
                                           obj.km_a_recorrer, 
-                                          remitente_comercial_como_canjeador, 
+                                          str(remitente_comercial_como_canjeador), 
                                           cuit_corredor, 
-                                          remitente_comercial_como_productor, 
+                                          str(remitente_comercial_como_productor), 
                                           obj.turno)
     obj.numero_ctg = numero_ctg
     obj.observaciones = wsctg.Observaciones
@@ -252,3 +303,4 @@ def solicitar_ctg_inicial(**kwargs):
     obj.save()
     
     Operacion.objects.create(ctg=obj, tipo_operacion=1)
+'''

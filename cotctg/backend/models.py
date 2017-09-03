@@ -81,7 +81,7 @@ class CTG(models.Model):
     )
     
     usuario_solicitante = models.ForeignKey(User, verbose_name='Usuario Solicitante')
-    numero_carta_de_porte = models.PositiveIntegerField('Nro Carta de Porte', validators=[MaxValueValidator(999999999999)])
+    numero_carta_de_porte = models.CharField('Nro Carta de Porte', max_length=12)
     codigo_especie = models.ForeignKey('Especie', verbose_name='Codigo Especie')
     cuit_remitente = models.ForeignKey(Entidad, verbose_name='Cuit Remitente Comercial', related_name='ctg_remitente', blank=True, null=True)
     remitente_comercial_como_canjeador = models.BooleanField('Rte Comercial actua como Canjeador?', default=False)
@@ -117,9 +117,8 @@ class CTG(models.Model):
     def __unicode__(self):
         return "Ctg: {}, Estado: {}".format(self.numero_ctg, self.estado)
     
-    def save(self, **kwargs):
-        obj = self
-        token = obj.usuario_solicitante.credenciales.obtener_afip_token()
+    def _obtener_ctg(self):
+        token = self.usuario_solicitante.credenciales.obtener_afip_token()
         wsctg = WSCTG()
         wsctg.HOMO = HOMO
         wsctg.WSDL = WSCTG_WSDL
@@ -127,43 +126,44 @@ class CTG(models.Model):
         wsctg.SetTicketAcceso(token)
         wsctg.Cuit = CUIT_SOLICITANTE
         
-        cuit_transportista = obj.cuit_transportista.cuit if obj.cuit_transportista else None 
-        cuit_corredor = obj.cuit_corredor.cuit if obj.cuit_corredor else None 
-        cuit_remitente = obj.cuit_remitente.cuit if obj.cuit_remitente else None 
-        remitente_comercial_como_canjeador = cuit_canjeador = cuit_remitente if obj.remitente_comercial_como_canjeador else None 
-        remitente_comercial_como_productor = cuit_canjeador = cuit_remitente if obj.remitente_comercial_como_productor else None 
+        cuit_transportista = self.cuit_transportista.cuit if self.cuit_transportista else None 
+        cuit_corredor = self.cuit_corredor.cuit if self.cuit_corredor else None 
+        cuit_remitente = self.cuit_remitente.cuit if self.cuit_remitente else None 
+        remitente_comercial_como_canjeador = cuit_canjeador = cuit_remitente if self.remitente_comercial_como_canjeador else None 
+        remitente_comercial_como_productor = cuit_canjeador = cuit_remitente if self.remitente_comercial_como_productor else None 
         
-        remitente_comercial_como_canjeador = ''
-        remitente_comercial_como_productor = ''
-        
-        numero_ctg = wsctg.SolicitarCTGInicial(obj.numero_carta_de_porte, 
-                                              obj.codigo_especie.codigo,
+        numero_ctg = wsctg.SolicitarCTGInicial(self.numero_carta_de_porte, 
+                                              self.codigo_especie.codigo,
                                               cuit_canjeador, 
-                                              obj.cuit_destino.cuit, 
-                                              obj.cuit_destinatario.cuit, 
-                                              obj.codigo_localidad_origen.codigo, 
-                                              obj.codigo_localidad_destino.codigo, 
-                                              obj.codigo_cosecha.codigo, 
-                                              obj.peso_neto_carga, 
-                                              obj.cant_horas, 
-                                              obj.patente_vehiculo, 
+                                              self.cuit_destino.cuit, 
+                                              self.cuit_destinatario.cuit, 
+                                              self.codigo_localidad_origen.codigo, 
+                                              self.codigo_localidad_destino.codigo, 
+                                              self.codigo_cosecha.codigo, 
+                                              self.peso_neto_carga, 
+                                              self.cant_horas, 
+                                              self.patente_vehiculo, 
                                               cuit_transportista, 
-                                              obj.km_a_recorrer, 
-                                              str(remitente_comercial_como_canjeador), 
+                                              self.km_a_recorrer, 
+                                              remitente_comercial_como_canjeador, 
                                               cuit_corredor, 
-                                              str(remitente_comercial_como_productor), 
-                                              obj.turno)
-        obj.numero_ctg = numero_ctg
-        obj.observaciones = wsctg.Observaciones
-        obj.fechahora = wsctg.FechaHora
-        obj.vigenciadesde = wsctg.VigenciaDesde
-        obj.vigenciahasta = wsctg.VigenciaHasta
-        obj.tarifareferencia = wsctg.TarifaReferencia
-        obj.errores = wsctg.Errores
-        obj.controles = wsctg.Controles
+                                              remitente_comercial_como_productor, 
+                                              self.turno)
+        self.numero_ctg = numero_ctg
+        self.observaciones = wsctg.Observaciones
+        self.fechahora = wsctg.FechaHora
+        self.vigenciadesde = wsctg.VigenciaDesde
+        self.vigenciahasta = wsctg.VigenciaHasta
+        self.tarifareferencia = wsctg.TarifaReferencia
+        self.errores = wsctg.Errores
+        self.controles = wsctg.Controles
+    
+    def save(self, **kwargs):
+        if not self.numero_ctg:
+            self._obtener_ctg()
         
         #Operacion.objects.create(ctg=obj, tipo_operacion=1)
-        return models.Model.save(obj, **kwargs)
+        return models.Model.save(self, **kwargs)
     
     class Meta:
         verbose_name = 'CTG'

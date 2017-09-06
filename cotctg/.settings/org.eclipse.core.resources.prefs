@@ -1,3 +1,5 @@
 eclipse.preferences.version=1
 encoding//backend/admin.py=utf-8
+encoding//backend/migrations/0007_auto_20170906_1542.py=utf-8
+encoding//backend/migrations/0008_auto_20170906_1542.py=utf-8
 encoding//backend/models.py=utf-8

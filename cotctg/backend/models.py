@@ -55,7 +55,7 @@ class Entidad(models.Model):
                 (3, 'Destinatario'),
                 (4, 'Corredor'),
                 (5, 'Transportista'),)
-    usuario_solicitante = models.ManyToManyField(User, verbose_name='Usuario Solicitante')
+    usuario_solicitante = models.ForeignKey(User, verbose_name='Usuario Solicitante', null=True)
     nombre = models.CharField('Nombre de Entidad', max_length=120)
     cuit = models.PositiveIntegerField('CUIT', validators=[MaxValueValidator(99999999999)])
     actua_como = models.IntegerField('Actúa como', choices=ACTUA_COMO)
@@ -81,26 +81,26 @@ class CTG(models.Model):
     )
     
     usuario_solicitante = models.ForeignKey(User, verbose_name='Usuario Solicitante')
-    numero_carta_de_porte = models.CharField('Nro Carta de Porte', max_length=12)
-    codigo_especie = models.ForeignKey('Especie', verbose_name='Codigo Especie')
+    numero_carta_de_porte = models.CharField('*Nro Carta de Porte', max_length=12, blank=True, null=True)
+    codigo_especie = models.ForeignKey('Especie', verbose_name='*Codigo Especie', blank=True, null=True)
     cuit_remitente = models.ForeignKey(Entidad, verbose_name='Cuit Remitente Comercial', related_name='ctg_remitente', blank=True, null=True)
     remitente_comercial_como_canjeador = models.BooleanField('Rte Comercial actua como Canjeador?', default=False)
     remitente_comercial_como_productor = models.BooleanField('Rte Comercial actua como Productor?', default=False)
-    cuit_destino = models.ForeignKey(Entidad, verbose_name='Cuit Destino', related_name='ctg_destino')
-    cuit_destinatario = models.ForeignKey(Entidad, verbose_name='Cuit Destinatario', related_name='ctg_destinatario')
+    cuit_destino = models.ForeignKey(Entidad, verbose_name='*Cuit Destino', related_name='ctg_destino', blank=True, null=True)
+    cuit_destinatario = models.ForeignKey(Entidad, verbose_name='*Cuit Destinatario', related_name='ctg_destinatario', blank=True, null=True)
     cuit_transportista = models.ForeignKey(Entidad, verbose_name='Cuit Tranportista', blank=True, null=True, related_name='ctg_transportista') 
     cuit_corredor = models.ForeignKey(Entidad, verbose_name='Cuit Corredor', blank=True, null=True, related_name='ctg_corredor')
-    codigo_localidad_origen = models.ForeignKey('Localidad', verbose_name='Codigo Localidad Origen', related_name='ctg_localidad_origen')
-    codigo_localidad_destino = models.ForeignKey('Localidad', verbose_name='Codigo Localidad Destino', related_name='ctg_localidad_destino')
-    codigo_cosecha = models.ForeignKey('Cosecha', verbose_name='Codigo Cosecha')
-    peso_neto_carga = models.PositiveIntegerField('Peso Neto de Carga')
+    codigo_localidad_origen = models.ForeignKey('Localidad', verbose_name='*Codigo Localidad Origen', related_name='ctg_localidad_origen', blank=True, null=True)
+    codigo_localidad_destino = models.ForeignKey('Localidad', verbose_name='*Codigo Localidad Destino', related_name='ctg_localidad_destino', blank=True, null=True)
+    codigo_cosecha = models.ForeignKey('Cosecha', verbose_name='*Codigo Cosecha', blank=True, null=True)
+    peso_neto_carga = models.PositiveIntegerField('*Peso Neto de Carga', blank=True, null=True)
     cant_horas = models.PositiveIntegerField('Cantidad de Horas', blank=True, null=True)
-    patente_vehiculo = models.CharField('Patente Vehiculo', max_length=30, blank=True, null=True)
-    km_a_recorrer = models.PositiveIntegerField('Km a Recorrer')
+    patente_vehiculo = models.CharField('*Patente Vehiculo', max_length=30, blank=True, null=True)
+    km_a_recorrer = models.PositiveIntegerField('*Km a Recorrer', blank=True, null=True)
     #remitente_comercial_como_canjeador = models.CharField('Remitente comercial Canjeador', max_length=100, blank=True) 
     #remitente_comercial_como_productor = models.CharField('Remitente comercial Canjeador', max_length=100, blank=True) 
     turno = models.CharField('Turno', max_length=50, blank=True, null=True)
-    estado = models.IntegerField('Estado del CTG', choices=CTG_ESTADO, default=1)
+    estado = models.IntegerField('Estado del CTG', choices=CTG_ESTADO, default=1, blank=True, null=True)
     geolocalizacion = models.CharField('Geo Localizacion de la Solicitud', blank=True, max_length=150)
     numero_ctg = models.CharField('Nro CTG', max_length=50, blank=True)
     observaciones = models.CharField('Observaciones', blank=True, null=True, max_length=200)
@@ -110,6 +110,7 @@ class CTG(models.Model):
     tarifareferencia = models.CharField('Tarifa Referencia', blank=True, null=True, max_length=200)
     errores = models.CharField('Errores', blank=True, null=True, max_length=200)
     controles = models.CharField('Controles', blank=True, null=True, max_length=200)
+    codigo_operacion = models.CharField('Codigo Operacion', blank=True, null=True, max_length=100)
     
     def has_related_object(self, related_name):
         return hasattr(self, related_name)
@@ -117,7 +118,25 @@ class CTG(models.Model):
     def __unicode__(self):
         return "Ctg: {}, Estado: {}".format(self.numero_ctg, self.estado)
     
-    def _obtener_ctg(self):
+    def anular_ctg(self):
+        if self.numero_carta_de_porte and self.numero_ctg:
+            token = self.usuario_solicitante.credenciales.obtener_afip_token()
+            wsctg = WSCTG()
+            wsctg.HOMO = HOMO
+            wsctg.WSDL = WSCTG_WSDL
+            wsctg.Conectar()
+            wsctg.SetTicketAcceso(token)
+            wsctg.Cuit = CUIT_SOLICITANTE
+            wsctg.AnularCTG(self.numero_carta_de_porte, self.numero_ctg)
+            
+            self.numero_carta_de_porte = wsctg.CartaPorte
+            self.numero_ctg = wsctg.NumeroCTG
+            self.fechahora = wsctg.FechaHora
+            self.codigo_operacion = wsctg.CodigoOperacion
+        self.estado = 4
+        self.save()
+    
+    def solicitar_ctg(self):
         token = self.usuario_solicitante.credenciales.obtener_afip_token()
         wsctg = WSCTG()
         wsctg.HOMO = HOMO
@@ -158,13 +177,6 @@ class CTG(models.Model):
         self.errores = wsctg.Errores
         self.controles = wsctg.Controles
     
-    def save(self, **kwargs):
-        if not self.numero_ctg:
-            self._obtener_ctg()
-        
-        #Operacion.objects.create(ctg=obj, tipo_operacion=1)
-        return models.Model.save(self, **kwargs)
-    
     class Meta:
         verbose_name = 'CTG'
         verbose_name_plural = 'CTGs'
@@ -175,13 +187,13 @@ class Operacion(models.Model):
     Representa todas las operacion ante AFIP realizadas por el usuario
     '''    
     TIPO_OPERACION = (
-        (1, 'Solicitud CTG desde Inicio'),
-        (2, 'Solicitud CTG dato Pendiente'),
-        (3, 'Anular CTG')
+        (1, 'Solicitud de CTG'),
+        (2, 'Solicitud de CTG con Dato Pendiente'),
+        (3, 'Anulacion de CTG')
     )
     fecha = models.DateTimeField('Fecha de Operacion', default=timezone.now)
     tipo_operacion = models.CharField('Tipo de Operacion', choices=TIPO_OPERACION, max_length=20)
-    ctg = models.ForeignKey(CTG, null=True)
+    datos = models.TextField('Datos de la Operacion')
     
     def __unicode__(self):
         return self.tipo_operacion

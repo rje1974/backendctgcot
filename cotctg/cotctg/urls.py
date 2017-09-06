@@ -18,9 +18,12 @@ from django.contrib import admin
 from backend.views import GoogleLogin
 from rest_framework import routers
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from backend.viewsets import CTGViewSet, LocalidadViewSet
 
 
 router = routers.DefaultRouter()
+router.register('ctg', CTGViewSet, base_name='ctg')
+router.register('localidades', LocalidadViewSet, base_name='localidades')
 
 
 urlpatterns = [

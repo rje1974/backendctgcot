@@ -11,7 +11,9 @@ from django.db.models.signals import post_save
 from django.utils import timezone
 from .constants import WSAA_WSDL, WSAA_URL, CACERT
 from django.db.models.fields.related import ForeignKey
-from backend.constants import WSCTG_WSDL
+from backend.constants import WSCTG_WSDL, CTG_ESTADO_SIN_GENERAR,\
+    CTG_ESTADO_GENERADO, CTG_ESTADO_PENDIENTE, CTG_ESTADO_ANULADO,\
+    CTG_ESTADO_ARRIBADO
 
 
 def user_directory_path(instance, filename):
@@ -58,14 +60,14 @@ class Entidad(models.Model):
     usuario_solicitante = models.ForeignKey(User, verbose_name='Usuario Solicitante', null=True)
     nombre = models.CharField('Nombre de Entidad', max_length=120)
     cuit = models.PositiveIntegerField('CUIT', validators=[MaxValueValidator(99999999999)])
-    actua_como = models.IntegerField('Actúa como', choices=ACTUA_COMO)
+    actua_como = models.IntegerField('Actúa como', choices=ACTUA_COMO, null=True, blank=True)
     
     def __unicode__(self):
         return self.nombre
     
     class Meta:
-        verbose_name = 'Empresa'
-        verbose_name_plural = 'Empresas'
+        verbose_name = 'Entidad'
+        verbose_name_plural = 'Entidades'
         
 
 class CTG(models.Model):
@@ -73,22 +75,26 @@ class CTG(models.Model):
     Entidad que representa un Codigo de Trazabilidad de Granos
     '''
     CTG_ESTADO = (
-        (1, 'Sin Generar'),
-        (2, 'Generado'),
-        (3, 'Datos Pendientes'),
-        (4, 'Anulado'),
-        (5, 'Arribado')
+        (CTG_ESTADO_SIN_GENERAR, 'Sin Generar'),
+        (CTG_ESTADO_GENERADO, 'Generado'),
+        (CTG_ESTADO_PENDIENTE, 'Datos Pendientes'),
+        (CTG_ESTADO_ANULADO, 'Anulado'),
+        (CTG_ESTADO_ARRIBADO, 'Arribado')
     )
     
     usuario_solicitante = models.ForeignKey(User, verbose_name='Usuario Solicitante')
     numero_carta_de_porte = models.CharField('*Nro Carta de Porte', max_length=12, blank=True, null=True)
     codigo_especie = models.ForeignKey('Especie', verbose_name='*Codigo Especie', blank=True, null=True)
     cuit_remitente = models.ForeignKey(Entidad, verbose_name='Cuit Remitente Comercial', related_name='ctg_remitente', blank=True, null=True)
+    #cuit_remitente = models.CharField('Cuit Remitente Comercial', max_length=11, null=True, blank=True)
     remitente_comercial_como_canjeador = models.BooleanField('Rte Comercial actua como Canjeador?', default=False)
     remitente_comercial_como_productor = models.BooleanField('Rte Comercial actua como Productor?', default=False)
     cuit_destino = models.ForeignKey(Entidad, verbose_name='*Cuit Destino', related_name='ctg_destino', blank=True, null=True)
+    #cuit_destino = models.CharField('*Cuit Destino', max_length=11, null=True, blank=True)
     cuit_destinatario = models.ForeignKey(Entidad, verbose_name='*Cuit Destinatario', related_name='ctg_destinatario', blank=True, null=True)
-    cuit_transportista = models.ForeignKey(Entidad, verbose_name='Cuit Tranportista', blank=True, null=True, related_name='ctg_transportista') 
+    #cuit_destinatario = models.CharField('*Cuit Destinatario', max_length=11, null=True, blank=True)
+    cuit_transportista = models.ForeignKey(Entidad, verbose_name='Cuit Tranportista', blank=True, null=True, related_name='ctg_transportista')
+    #cuit_transportista = models.CharField('*Cuit Transportista', max_length=11, null=True, blank=True) 
     cuit_corredor = models.ForeignKey(Entidad, verbose_name='Cuit Corredor', blank=True, null=True, related_name='ctg_corredor')
     codigo_localidad_origen = models.ForeignKey('Localidad', verbose_name='*Codigo Localidad Origen', related_name='ctg_localidad_origen', blank=True, null=True)
     codigo_localidad_destino = models.ForeignKey('Localidad', verbose_name='*Codigo Localidad Destino', related_name='ctg_localidad_destino', blank=True, null=True)
@@ -176,6 +182,9 @@ class CTG(models.Model):
         self.tarifareferencia = wsctg.TarifaReferencia
         self.errores = wsctg.Errores
         self.controles = wsctg.Controles
+        # TODO: Revisar correcta logica
+        if not self.controles:
+            self.estado = CTG_ESTADO_GENERADO
     
     class Meta:
         verbose_name = 'CTG'

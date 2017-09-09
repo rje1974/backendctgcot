@@ -1,4 +1,4 @@
-"""cotctg URL Configuration
+"""cotctg URL Configuration0
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/1.11/topics/http/urls/
@@ -18,12 +18,17 @@ from django.contrib import admin
 from backend.views import GoogleLogin
 from rest_framework import routers
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
-from backend.viewsets import CTGViewSet, LocalidadViewSet
+from backend.viewsets import CTGViewSet, LocalidadViewSet, EntidadViewSet,\
+    CosechaViewSet, EspecieViewSet, EstablecimientoViewSet
 
 
 router = routers.DefaultRouter()
 router.register('ctg', CTGViewSet, base_name='ctg')
 router.register('localidades', LocalidadViewSet, base_name='localidades')
+router.register('entidades', EntidadViewSet, base_name='entidades')
+router.register('cosechas', CosechaViewSet, base_name='cosechas')
+router.register('especies', EspecieViewSet, base_name='especies')
+router.register('establecimientos', EstablecimientoViewSet, base_name='establecimientos')
 
 
 urlpatterns = [

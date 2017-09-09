@@ -20,3 +20,13 @@ else:
     WSAA_URL = "https://wsaa.afip.gov.ar/ws/services/LoginCms"
     DEBUG = False
     HOMO = False
+
+
+
+# Constantes de modelos de ddtos
+
+CTG_ESTADO_SIN_GENERAR = 1
+CTG_ESTADO_GENERADO = 2
+CTG_ESTADO_PENDIENTE = 3
+CTG_ESTADO_ANULADO = 4
+CTG_ESTADO_ARRIBADO = 5

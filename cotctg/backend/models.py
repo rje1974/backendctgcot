@@ -69,6 +69,86 @@ class Entidad(models.Model):
         verbose_name = 'Entidad'
         verbose_name_plural = 'Entidades'
         
+        
+class Provincia_ARBA(models.Model):
+    codigo = models.CharField('Codigo', max_length=1)
+    descripcion = models.CharField('Nombre', max_length=25)
+    
+    def __unicode__(self):
+        return self.descripcion
+    
+    class Meta:
+        verbose_name = 'Provicia ARBA'
+        verbose_name_plural = 'Provincias ARBA'
+        
+        
+class COT(models.Model):
+    '''
+    Representa un Codigo de Operacion Traslado/Transporte
+    (Por el momento se incluyen solo los campos requeridos)
+    
+    Campos que se agregan manualmente al txt:
+    tipo_registro
+    cantidad_total_remitos
+    '''
+    SUJETO_GENERADOR =(
+            ('E', 'Emisor'),
+            ('D', 'Destinatario')
+        )
+    SI_NO = (
+            ('SI', 'Si'),
+            ('NO', 'No')
+        )
+    ARBA_MEDIDAS = (
+        (1, 'Kilogramos'),
+        (2, 'Litros'),
+        (3, 'Unidades'),
+        (4, 'Metros Cuadrados'),
+        (5, 'Metros'),
+        (6, 'Metros Cubicos'),
+        (7, 'Pares'),        
+        )
+    
+    cuit_empresa = models.CharField('CUIT Empresa', max_length=11)
+    fecha_emision = models.DateField('Fecha Emision')
+    codigo_unico = models.CharField('Codigo Unico', max_length=16)
+    fecha_salida_transporte = models.DateField('Fecha Salida Transporte')
+    sujeto_generador = models.CharField('Sujeto Generador', choices=SUJETO_GENERADOR, max_length=1)
+    destinatario_consumidor_final = models.BooleanField('Destinatario Consumidor Final?')
+    destinatario_tenedor = models.BooleanField('Destinatario es Tenedor')
+    destino_domicilio_calle = models.CharField('Destino: Calle de Domicilio', max_length=40)
+    destino_domicilio_codigopostal = models.CharField('Destino: Codigo Postal', max_length=8)
+    destino_domicilio_localidad = models.CharField('Destino: Localidad', max_length=50)
+    destino_domicilio_provincia = models.ForeignKey('Provincia_ARBA')
+    entrega_domicilio_origen = models.CharField('Entrega Domicilio Origen', choices=SI_NO, max_length=2)
+    origen_cuit = models.CharField('Origen CUIT', max_length=11)
+    origen_razon_social = models.CharField('Origen: Razon Social', max_length=50)
+    emisor_tenedor = models.BooleanField('Emisor es Tenedor')
+    origen_domicilio_calle = models.CharField('Origen: Calle de Domicilio', max_length=40)
+    origen_domicilio_codigopostal = models.CharField('Origen: Domicilio Codigo Postal', max_length=8)
+    origen_domicilio_localidad = models.CharField('Origen: Localidad', max_length=50)
+    origen_domicilio_provincia = models.ForeignKey('Provincia_ARBA')
+    transportista_cuit = models.CharField('CUIT Transportista', max_length=11)
+    producto_no_term_dev = models.BooleanField('Productos No Terminados / Devoluciones', default=False)
+    importe = models.CharField('Importe', max_length=10)
+    codigo_unico_producto = models.CharField('Codigo Unico Producto', max_length=6)
+    rentas_codigo_unidad_medida = models.CharField('Codigo Unidad Medida', max_length=1, choices=ARBA_MEDIDAS)
+    cantidad = models.CharField('Cantidad', max_length=15)
+    propio_codigo_producto = models.CharField('Propio Codigo Producto', max_length=25)
+    propio_descripcion_producto = models.CharField('Propio Descripcion Producto', max_length=40)
+    propio_descripcion_unidad_medida = models.CharField('Propio Descripcion Unidad Medida', max_length=20)
+    cantidad_ajustada = models.CharField('Cantidad Ajustada', max_length=15)
+    generar_cot = models.BooleanField('Generar COT?', default=False)
+    cot_nombre = models.CharField('COT Nombre', max_length=30)
+    
+    def __unicode__(self):
+        return self.cot_nombre
+        
+    class Meta:
+        verbose_name = 'COT'
+        verbose_name_plural = 'COTs'
+    
+    
 
 class CTG(models.Model):
     '''

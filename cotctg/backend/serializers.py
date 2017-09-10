@@ -30,6 +30,7 @@ class LocalidadSerializer(ModelSerializer):
         rep.pop('provincia')
         return rep 
         
+        
 class CTGSerializer(ModelSerializer):
     class Meta:
         model = CTG

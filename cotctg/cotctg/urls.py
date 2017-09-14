@@ -19,7 +19,7 @@ from backend.views import GoogleLogin
 from rest_framework import routers
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from backend.viewsets import CTGViewSet, LocalidadViewSet, EntidadViewSet,\
-    CosechaViewSet, EspecieViewSet, EstablecimientoViewSet
+    CosechaViewSet, EspecieViewSet, EstablecimientoViewSet, OperacionViewSet
 
 
 router = routers.DefaultRouter()
@@ -29,6 +29,7 @@ router.register('entidades', EntidadViewSet, base_name='entidades')
 router.register('cosechas', CosechaViewSet, base_name='cosechas')
 router.register('especies', EspecieViewSet, base_name='especies')
 router.register('establecimientos', EstablecimientoViewSet, base_name='establecimientos')
+router.register('operaciones', OperacionViewSet, base_name='operaciones')
 
 
 urlpatterns = [

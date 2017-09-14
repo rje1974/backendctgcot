@@ -5,15 +5,12 @@ from django.db import models
 from pyafipws.wsaa import WSAA
 from pyafipws.wsctg import WSCTG
 from .constants import HOMO, DEBUG, CUIT_SOLICITANTE
-from django.core.validators import MaxValueValidator
-from django.dispatch.dispatcher import receiver
-from django.db.models.signals import post_save
 from django.utils import timezone
 from .constants import WSAA_WSDL, WSAA_URL, CACERT
-from django.db.models.fields.related import ForeignKey
-from backend.constants import WSCTG_WSDL, CTG_ESTADO_SIN_GENERAR,\
-    CTG_ESTADO_GENERADO, CTG_ESTADO_PENDIENTE, CTG_ESTADO_ANULADO,\
-    CTG_ESTADO_ARRIBADO
+from backend.constants import WSCTG_WSDL, CTG_ESTADO_GENERADO\
+    , CTG_ESTADO_PENDIENTE, CTG_ESTADO_ANULADO,\
+    CTG_ESTADO_ARRIBADO, CTG_ACCION_SOLICITAR, CTG_ACCION_PARCIAL
+from django.utils.datetime_safe import datetime
 
 
 def user_directory_path(instance, filename):
@@ -22,6 +19,9 @@ def user_directory_path(instance, filename):
 
 
 class Credencial(models.Model):
+    '''
+    Representa las credenciales de autenticacion del usuario ante AFIP y ARBA
+    '''
     usuario = models.OneToOneField(User, on_delete=models.CASCADE, related_name='credenciales')
     key = models.FileField('Clave Privada', upload_to=user_directory_path)
     certificado = models.FileField('Certificado', upload_to=user_directory_path)
@@ -59,7 +59,7 @@ class Entidad(models.Model):
                 (5, 'Transportista'),)
     usuario_solicitante = models.ForeignKey(User, verbose_name='Usuario Solicitante', null=True)
     nombre = models.CharField('Nombre de Entidad', max_length=120)
-    cuit = models.PositiveIntegerField('CUIT', validators=[MaxValueValidator(99999999999)])
+    cuit = models.CharField('CUIT', max_length=11, primary_key=True)
     actua_como = models.IntegerField('Actúa como', choices=ACTUA_COMO, null=True, blank=True)
     
     def __unicode__(self):
@@ -71,7 +71,7 @@ class Entidad(models.Model):
         
         
 class Provincia_ARBA(models.Model):
-    codigo = models.CharField('Codigo', max_length=1)
+    codigo = models.CharField('Codigo', max_length=1, primary_key=True)
     descripcion = models.CharField('Nombre', max_length=25)
     
     def __unicode__(self):
@@ -119,7 +119,7 @@ class COT(models.Model):
     destino_domicilio_calle = models.CharField('Destino: Calle de Domicilio', max_length=40)
     destino_domicilio_codigopostal = models.CharField('Destino: Codigo Postal', max_length=8)
     destino_domicilio_localidad = models.CharField('Destino: Localidad', max_length=50)
-    destino_domicilio_provincia = models.ForeignKey('Provincia_ARBA')
+    destino_domicilio_provincia = models.ForeignKey('Provincia_ARBA', related_name='provincia_destino')
     entrega_domicilio_origen = models.CharField('Entrega Domicilio Origen', choices=SI_NO, max_length=2)
     origen_cuit = models.CharField('Origen CUIT', max_length=11)
     origen_razon_social = models.CharField('Origen: Razon Social', max_length=50)
@@ -127,7 +127,7 @@ class COT(models.Model):
     origen_domicilio_calle = models.CharField('Origen: Calle de Domicilio', max_length=40)
     origen_domicilio_codigopostal = models.CharField('Origen: Domicilio Codigo Postal', max_length=8)
     origen_domicilio_localidad = models.CharField('Origen: Localidad', max_length=50)
-    origen_domicilio_provincia = models.ForeignKey('Provincia_ARBA')
+    origen_domicilio_provincia = models.ForeignKey('Provincia_ARBA', related_name='provincia_origen')
     transportista_cuit = models.CharField('CUIT Transportista', max_length=11)
     producto_no_term_dev = models.BooleanField('Productos No Terminados / Devoluciones', default=False)
     importe = models.CharField('Importe', max_length=10)
@@ -140,6 +140,7 @@ class COT(models.Model):
     cantidad_ajustada = models.CharField('Cantidad Ajustada', max_length=15)
     generar_cot = models.BooleanField('Generar COT?', default=False)
     cot_nombre = models.CharField('COT Nombre', max_length=30)
+    fecha = models.DateTimeField('Fecha de Operacion', default=timezone.datetime.now)
     
     def __unicode__(self):
         return self.cot_nombre
@@ -155,12 +156,15 @@ class CTG(models.Model):
     Entidad que representa un Codigo de Trazabilidad de Granos
     '''
     CTG_ESTADO = (
-        (CTG_ESTADO_SIN_GENERAR, 'Sin Generar'),
+        (CTG_ESTADO_PENDIENTE, 'Parcial'),
         (CTG_ESTADO_GENERADO, 'Generado'),
-        (CTG_ESTADO_PENDIENTE, 'Datos Pendientes'),
         (CTG_ESTADO_ANULADO, 'Anulado'),
         (CTG_ESTADO_ARRIBADO, 'Arribado')
     )
+    CTG_ACCION = (
+        (CTG_ACCION_PARCIAL, 'CTG Parcial'),
+        (CTG_ACCION_SOLICITAR, 'Solicitar CTG')
+        )
     
     usuario_solicitante = models.ForeignKey(User, verbose_name='Usuario Solicitante')
     numero_carta_de_porte = models.CharField('*Nro Carta de Porte', max_length=12, blank=True, null=True)
@@ -197,12 +201,31 @@ class CTG(models.Model):
     errores = models.CharField('Errores', blank=True, null=True, max_length=200)
     controles = models.CharField('Controles', blank=True, null=True, max_length=200)
     codigo_operacion = models.CharField('Codigo Operacion', blank=True, null=True, max_length=100)
+    accion = models.IntegerField('Accion', choices=CTG_ACCION, default=1)
+    operacion = models.ForeignKey('Operacion', null=True, blank=True, related_name='ctg')
+    nombre = models.CharField('Nombre de CTG', null=True, blank=True, max_length=50)
+    fecha = models.DateTimeField('Fecha de Operacion', default=timezone.localdate, null=True)
+    
+    '''
+    def registrar_operacion(self, tipo_operacion):
+        # Funcion encargada de registrar la operacion en el caso que necesario
+        if not self.operacion:
+            self.operacion = Operacion.objects.create(nombre=self.nombre)
+        self.operacion.tipo_operacion = tipo_operacion
+        self.operacion.datos = {}
+    '''     
+    
+    def save(self, **kwargs):
+        # Parche para solicitar cuando se crea registro desde Admin
+        if (self.estado==CTG_ESTADO_PENDIENTE and self.accion==CTG_ACCION_SOLICITAR):
+            self.solicitar_ctg()
+        return super(CTG, self).save(**kwargs)
     
     def has_related_object(self, related_name):
         return hasattr(self, related_name)
     
     def __unicode__(self):
-        return "Ctg: {}, Estado: {}".format(self.numero_ctg, self.estado)
+        return "Carta Porte: {}, Ctg: {}, Estado: {}".format(self.numero_carta_de_porte, self.numero_ctg, self.estado)
     
     def anular_ctg(self):
         if self.numero_carta_de_porte and self.numero_ctg:
@@ -219,10 +242,24 @@ class CTG(models.Model):
             self.numero_ctg = wsctg.NumeroCTG
             self.fechahora = wsctg.FechaHora
             self.codigo_operacion = wsctg.CodigoOperacion
-        self.estado = 4
+        self.estado = CTG_ESTADO_ANULADO
         self.save()
     
+    def _simular_ctg(self):
+        from random import randint
+        self.numero_ctg = randint(9100200, 49100200)
+        self.fechahora = timezone.datetime.now()
+        self.vigenciadesde = timezone.localdate()
+        self.vigenciahasta = timezone.localdate() + timezone.timedelta(days=5)
+        self.tarifareferencia = '{}.{}'.format(randint(100, 999), randint(0, 99))
+        self.errores = []
+        self.controles = []
+        if not self.controles:
+            self.estado = CTG_ESTADO_GENERADO
+    
     def solicitar_ctg(self):
+        return self._simular_ctg()
+        
         token = self.usuario_solicitante.credenciales.obtener_afip_token()
         wsctg = WSCTG()
         wsctg.HOMO = HOMO
@@ -276,11 +313,13 @@ class Operacion(models.Model):
     Representa todas las operacion ante AFIP realizadas por el usuario
     '''    
     TIPO_OPERACION = (
-        (1, 'Solicitud de CTG'),
-        (2, 'Solicitud de CTG con Dato Pendiente'),
-        (3, 'Anulacion de CTG')
+        (1, 'CTG Solicitado'),
+        (2, 'CTG carga parcial'),
+        (3, 'CTG Anulado'),
+        (4, 'COT')
     )
     fecha = models.DateTimeField('Fecha de Operacion', default=timezone.now)
+    nombre = models.CharField('Nombre de Operacion', max_length=120, blank=True)
     tipo_operacion = models.CharField('Tipo de Operacion', choices=TIPO_OPERACION, max_length=20)
     datos = models.TextField('Datos de la Operacion')
     
@@ -293,7 +332,7 @@ class Operacion(models.Model):
     
         
 class Cosecha(models.Model):
-    codigo = models.PositiveIntegerField('Codigo')
+    codigo = models.PositiveIntegerField('Codigo', primary_key=True)
     descripcion = models.CharField('Descripcion', max_length=100)
     
     def __unicode__(self):
@@ -305,7 +344,7 @@ class Cosecha(models.Model):
         
 
 class Especie(models.Model):
-    codigo = models.PositiveIntegerField('Codigo')
+    codigo = models.PositiveIntegerField('Codigo', primary_key=True)
     descripcion = models.CharField('Descripcion', max_length=100)
     
     def __unicode__(self):
@@ -317,7 +356,7 @@ class Especie(models.Model):
 
 
 class Establecimiento(models.Model):
-    codigo = models.PositiveIntegerField('Codigo')
+    codigo = models.PositiveIntegerField('Codigo', primary_key=True)
     descripcion = models.CharField('Descripcion', max_length=100)
     
     def __unicode__(self):
@@ -329,7 +368,7 @@ class Establecimiento(models.Model):
         
         
 class Provincia(models.Model):
-    codigo = models.PositiveIntegerField('Codigo')
+    codigo = models.PositiveIntegerField('Codigo', primary_key=True)
     nombre = models.CharField('Descripcion', max_length=100)
     
     def __unicode__(self):
@@ -342,7 +381,7 @@ class Provincia(models.Model):
     
 class Localidad(models.Model):
     provincia = models.ForeignKey(Provincia)
-    codigo = models.PositiveIntegerField('Codigo')
+    codigo = models.PositiveIntegerField('Codigo', primary_key=True)
     nombre = models.CharField('Descripcion', max_length=100)
     
     def __unicode__(self):

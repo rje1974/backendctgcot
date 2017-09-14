@@ -12,3 +12,4 @@ class GoogleLogin(SocialLoginView):
     adapter_class = GoogleOAuth2Adapter
     client_class = OAuth2Client
     callback_url = 'https://developers.google.com/oauthplayground'
+    

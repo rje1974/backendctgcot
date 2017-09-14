@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.db import models
 from pyafipws.wsaa import WSAA
 from pyafipws.wsctg import WSCTG
+from pyafipws.cot import COT as WSCOT
 from .constants import HOMO, DEBUG, CUIT_SOLICITANTE
 from django.utils import timezone
 from .constants import WSAA_WSDL, WSAA_URL, CACERT
@@ -108,11 +109,13 @@ class COT(models.Model):
         (6, 'Metros Cubicos'),
         (7, 'Pares'),        
         )
+    ARBA_DATE_FORMAT = ('%Y%m%%d')
     
+    usuario_solicitante = models.ForeignKey(User, verbose_name='Usuario Solicitante')
     cuit_empresa = models.CharField('CUIT Empresa', max_length=11)
-    fecha_emision = models.DateField('Fecha Emision')
-    codigo_unico = models.CharField('Codigo Unico', max_length=16)
-    fecha_salida_transporte = models.DateField('Fecha Salida Transporte')
+    fecha_emision = models.CharField('Fecha Emision (AAAAMMDD)', max_length=8)
+    codigo_unico = models.CharField('Codigo Unico (Carta de Porte)', max_length=16)
+    fecha_salida_transporte = models.CharField('Fecha Salida Transporte (AAAAMMDD)', max_length=8)
     sujeto_generador = models.CharField('Sujeto Generador', choices=SUJETO_GENERADOR, max_length=1)
     destinatario_consumidor_final = models.BooleanField('Destinatario Consumidor Final?')
     destinatario_tenedor = models.BooleanField('Destinatario es Tenedor')
@@ -132,7 +135,7 @@ class COT(models.Model):
     producto_no_term_dev = models.BooleanField('Productos No Terminados / Devoluciones', default=False)
     importe = models.CharField('Importe', max_length=10)
     codigo_unico_producto = models.CharField('Codigo Unico Producto', max_length=6)
-    rentas_codigo_unidad_medida = models.CharField('Codigo Unidad Medida', max_length=1, choices=ARBA_MEDIDAS)
+    rentas_codigo_unidad_medida = models.IntegerField('Codigo Unidad Medida', choices=ARBA_MEDIDAS)
     cantidad = models.CharField('Cantidad', max_length=15)
     propio_codigo_producto = models.CharField('Propio Codigo Producto', max_length=25)
     propio_descripcion_producto = models.CharField('Propio Descripcion Producto', max_length=40)
@@ -141,9 +144,49 @@ class COT(models.Model):
     generar_cot = models.BooleanField('Generar COT?', default=False)
     cot_nombre = models.CharField('COT Nombre', max_length=30)
     fecha = models.DateTimeField('Fecha de Operacion', default=timezone.datetime.now)
+    numero_comprobante = models.CharField('Numero de Comprobante', max_length=30, blank=True)
+    codigo_integridad = models.CharField('Codigo Integridad', max_length=50, blank=True)
+    remitos = models.TextField('Remitos', blank=True)
     
     def __unicode__(self):
         return self.cot_nombre
+        
+    def generar_archivo(self):
+        registro01 = '01|{}\r\n'.format(self.cuit_empresa)
+        '''
+        registro02 = '02|{fecha_emision}|91 R999900068148|{fecha_salida_transporte}| |{sujeto_generador}|0| | |30682115722|COMPUMUNDOS.A.|0|Ruta Prov | |S/N| | | |1200|PUERTO DE ESCOBAR|B| |NO|20244416722|COMPUMUNDO S.A.|0|San Martin 5797| |S/N| | | |1766|TABLADA|B|20045162673| | | | | | |1|1234\r'
+        registro02 += '\n'
+        registro02.format(fecha_emision=self.fecha_emision,
+                          fecha_salida_transporte=self.fecha_salida_transporte,
+                          sujeto_generador=self.sujeto_generador)
+        '''
+        registro02 = '02|20080124|91 R999900068148|20080124| |E|0| | |30682115722|COMPUMUNDOS.A.|0|Ruta Prov | |S/N| | | |1200|PUERTO DE ESCOBAR|B| |NO|23246414254|COMPUMUNDO S.A.|0|San Martin 5797| |S/N| | | |1766|TABLADA|B|20045162673| | | | | | |1|1234\r\n'
+
+        registro03 = '03|847150|3|100|23891|COMP. SP-3960 VP|UNI DAD| 100\r\n'
+        registro04 = '04|1\r\n'
+        archivo = open('TB_20244416722_000000_20170914_000001.txt', 'w+')
+        archivo.write(registro01)
+        archivo.write(registro02)
+        archivo.write(registro03)
+        archivo.write(registro04)
+        archivo.close()
+        return archivo
+        
+    def solicitar_cot(self):
+        archivo = self.generar_archivo()
+        cot = WSCOT()
+        cot.Usuario = '20244416722'
+        cot.Password = '431108'
+        cot.Conectar()
+        cot.PresentarRemito('/home/hugo/development/cotctg/cotctg/' + archivo.name)
+        self.numero_comprobante = cot.NumeroComprobante
+        self.codigo_integridad = cot.CodigoIntegridad
+        self.remitos = cot.remitos
+        
+    def save(self, **kwargs):
+        if self.generar_cot and not self.numero_comprobante:
+            self.solicitar_cot()
+        return super(COT, self).save(**kwargs)
         
     class Meta:
         verbose_name = 'COT'

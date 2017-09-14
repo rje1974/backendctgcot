@@ -3,18 +3,33 @@ Created on 6 sep. 2017
 
 @author: Hugo Chavero
 '''
-from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet,\
-    GenericViewSet, ViewSet
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from backend.serializers import CTGSerializer, LocalidadSerializer,\
     EntidadSerializer, CosechaSerializer, EspecieSerializer,\
     EstablecimientoSerializer, CTGOperatiocionSerializer,\
-    COTOperatiocionSerializer
+    COTOperatiocionSerializer, COTSerializer
 from backend.models import CTG, Localidad, Entidad, Cosecha, Especie,\
     Establecimiento, COT
 from rest_framework.response import Response
-from backend.constants import CTG_ESTADO_PENDIENTE, CTG_ESTADO_GENERADO
+from backend.constants import CTG_ESTADO_PENDIENTE
 
 
+class COTViewSet(ModelViewSet):
+    serializer_class = COTSerializer
+
+    def get_queryset(self):
+        queryset = COT.objects.filter(usuario_solicitante=self.request.user)
+        estado = self.request.query_params.get('estado', None)
+        if estado:
+            queryset = queryset.filter(estado=estado)
+        return queryset
+
+    def create(self, request, *args, **kwargs):
+        print request.data
+        request.data['usuario_solicitante'] = request.user.id
+        return ModelViewSet.create(self, request, *args, **kwargs)
+
+    
 class CTGViewSet(ModelViewSet):
     serializer_class = CTGSerializer
     
@@ -138,13 +153,14 @@ class EstablecimientoViewSet(ReadOnlyModelViewSet):
 class OperacionViewSet(ReadOnlyModelViewSet):
         
     def list(self, request):
+        resp_list = []
         # TODO: Recibir parametro para efectuar filtro en consulta
         
         #ctg_queryset = CTG.objects.filter(estado=CTG_ESTADO_GENERADO)
         ctg_queryset = CTG.objects.all()
+        cot_queryset = COT.objects.all()
         serializer_ctg = CTGOperatiocionSerializer(ctg_queryset, many=True).data
         serializer_cot = COTOperatiocionSerializer(COT.objects.all(), many=True).data
-        resp_list = []
         if serializer_cot:
             resp_obj = {}
             resp_obj['title'] = 'COTs'

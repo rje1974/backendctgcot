@@ -6,7 +6,7 @@ Created on 6 sep. 2017
 from rest_framework.serializers import ModelSerializer
 from backend.models import Localidad, Provincia, CTG, Entidad, Cosecha, Especie,\
     Establecimiento, COT
-from backend.constants import CTG_ACCION_SOLICITAR
+from backend.constants import CTG_ACCION_SOLICITAR, COT_ACCION_SOLICTAR
 
 
 class ProvinciaSerializer(ModelSerializer):
@@ -29,6 +29,18 @@ class LocalidadSerializer(ModelSerializer):
         rep.pop('nombre')
         rep.pop('provincia')
         return rep 
+
+
+class COTSerializer(ModelSerializer):
+    class Meta:
+        model = COT
+        fields = '__all__'
+
+    def create(self, validated_data):
+        obj = COT.objects.create(**validated_data)
+        if validated_data.get('accion') == COT_ACCION_SOLICTAR:
+            obj.solicitar_cot()
+        return obj
         
         
 class CTGSerializer(ModelSerializer):

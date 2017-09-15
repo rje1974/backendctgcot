@@ -25,9 +25,11 @@ class COTViewSet(ModelViewSet):
         return queryset
 
     def create(self, request, *args, **kwargs):
-        print request.data
         request.data['usuario_solicitante'] = request.user.id
-        return ModelViewSet.create(self, request, *args, **kwargs)
+        request.data['cuit_empresa'] = '20244416722'
+        request.data['origen_cuit'] = '20244416722'
+        response = ModelViewSet.create(self, request, *args, **kwargs)
+        return response
 
     
 class CTGViewSet(ModelViewSet):
@@ -154,23 +156,32 @@ class OperacionViewSet(ReadOnlyModelViewSet):
         
     def list(self, request):
         resp_list = []
-        # TODO: Recibir parametro para efectuar filtro en consulta
-        
         #ctg_queryset = CTG.objects.filter(estado=CTG_ESTADO_GENERADO)
         ctg_queryset = CTG.objects.all()
         cot_queryset = COT.objects.all()
         serializer_ctg = CTGOperatiocionSerializer(ctg_queryset, many=True).data
-        serializer_cot = COTOperatiocionSerializer(COT.objects.all(), many=True).data
-        if serializer_cot:
-            resp_obj = {}
-            resp_obj['title'] = 'COTs'
-            resp_obj['data'] = serializer_cot
-            resp_list.append(resp_obj) 
-        if serializer_ctg:
+        serializer_cot = COTOperatiocionSerializer(cot_queryset, many=True).data
+        _filter = request.query_params.get('filter')
+        if _filter in '1':
+            if serializer_cot:
+                resp_obj = {}
+                resp_obj['title'] = 'COTs'
+                resp_obj['data'] = serializer_cot
+                resp_list.append(resp_obj) 
+            if serializer_ctg:
+                resp_obj = {}
+                resp_obj['title'] = 'CTGs'
+                resp_obj['data'] = serializer_ctg
+                resp_list.append(resp_obj)
+        elif _filter in '2' and serializer_ctg:
             resp_obj = {}
             resp_obj['title'] = 'CTGs'
             resp_obj['data'] = serializer_ctg
             resp_list.append(resp_obj)
-        
+        elif _filter in '3' and serializer_cot:
+            resp_obj = {}
+            resp_obj['title'] = 'COTs'
+            resp_obj['data'] = serializer_cot
+            resp_list.append(resp_obj)
         return Response(resp_list)
     

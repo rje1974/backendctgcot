@@ -38,7 +38,7 @@ class COTSerializer(ModelSerializer):
 
     def create(self, validated_data):
         obj = COT.objects.create(**validated_data)
-        if validated_data.get('accion') == COT_ACCION_SOLICTAR:
+        if validated_data.get('generar_cot'):
             obj.solicitar_cot()
         return obj
         

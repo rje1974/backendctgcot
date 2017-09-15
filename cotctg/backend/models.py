@@ -10,8 +10,8 @@ from django.utils import timezone
 from .constants import WSAA_WSDL, WSAA_URL, CACERT
 from backend.constants import WSCTG_WSDL, CTG_ESTADO_GENERADO\
     , CTG_ESTADO_PENDIENTE, CTG_ESTADO_ANULADO,\
-    CTG_ESTADO_ARRIBADO, CTG_ACCION_SOLICITAR, CTG_ACCION_PARCIAL
-from django.utils.datetime_safe import datetime
+    CTG_ESTADO_ARRIBADO, CTG_ACCION_SOLICITAR, CTG_ACCION_PARCIAL,\
+    COT_ESTADO_PENDIENTE, COT_ESTADO_GENERADO
 
 
 def user_directory_path(instance, filename):
@@ -92,6 +92,11 @@ class COT(models.Model):
     tipo_registro
     cantidad_total_remitos
     '''
+    COT_ESTADO = (
+        (COT_ESTADO_PENDIENTE, 'Parcial'),
+        (COT_ESTADO_GENERADO, 'Generado'),
+    )
+    
     SUJETO_GENERADOR =(
             ('E', 'Emisor'),
             ('D', 'Destinatario')
@@ -113,7 +118,7 @@ class COT(models.Model):
     
     usuario_solicitante = models.ForeignKey(User, verbose_name='Usuario Solicitante')
     cuit_empresa = models.CharField('CUIT Empresa', max_length=11)
-    fecha_emision = models.CharField('Fecha Emision (AAAAMMDD)', max_length=8)
+    fecha_emision = models.CharField('Fecha Emision (AAAAMMDD)', max_length=8, blank=True)
     codigo_unico = models.CharField('Codigo Unico (Carta de Porte)', max_length=16)
     fecha_salida_transporte = models.CharField('Fecha Salida Transporte (AAAAMMDD)', max_length=8)
     sujeto_generador = models.CharField('Sujeto Generador', choices=SUJETO_GENERADOR, max_length=1)
@@ -142,14 +147,15 @@ class COT(models.Model):
     propio_descripcion_unidad_medida = models.CharField('Propio Descripcion Unidad Medida', max_length=20)
     cantidad_ajustada = models.CharField('Cantidad Ajustada', max_length=15)
     generar_cot = models.BooleanField('Generar COT?', default=False)
-    cot_nombre = models.CharField('COT Nombre', max_length=30)
-    fecha = models.DateTimeField('Fecha de Operacion', default=timezone.datetime.now)
+    cot_nombre = models.CharField('COT Nombre', max_length=30, blank=True)
+    fecha = models.DateTimeField('Fecha de Operacion', default=timezone.now)
     numero_comprobante = models.CharField('Numero de Comprobante', max_length=30, blank=True)
     codigo_integridad = models.CharField('Codigo Integridad', max_length=50, blank=True)
-    remitos = models.TextField('Remitos', blank=True)
+    errores = models.TextField('Errores', blank=True)
+    estado = models.IntegerField('Estado del COT', choices=COT_ESTADO, default=1, blank=True, null=True)
     
     def __unicode__(self):
-        return self.cot_nombre
+        return 'Fecha: {}, Nombre: {}, Nro Comprobante: {}'.format(self.fecha, self.cot_nombre, self.numero_comprobante)
         
     def generar_archivo(self):
         registro01 = '01|{}\r\n'.format(self.cuit_empresa)
@@ -181,8 +187,17 @@ class COT(models.Model):
         cot.PresentarRemito('/home/hugo/development/cotctg/cotctg/' + archivo.name)
         self.numero_comprobante = cot.NumeroComprobante
         self.codigo_integridad = cot.CodigoIntegridad
-        self.remitos = cot.remitos
-        
+        errores = []
+        while cot.LeerValidacionRemito():
+            while cot.LeerErrorValidacion():
+                remito = {}
+                remito['Nro'] = cot.NumeroUnico
+                remito['Codigo Error'] = cot.CodigoError
+                remito['Mensaje Error'] = cot.MensajeError
+                errores.append(remito)
+        if not errores:
+            self.estado = COT_ESTADO_GENERADO
+            
     def save(self, **kwargs):
         if self.generar_cot and not self.numero_comprobante:
             self.solicitar_cot()
@@ -210,7 +225,7 @@ class CTG(models.Model):
         )
     
     usuario_solicitante = models.ForeignKey(User, verbose_name='Usuario Solicitante')
-    numero_carta_de_porte = models.CharField('*Nro Carta de Porte', max_length=12, blank=True, null=True)
+    numero_carta_de_porte = models.CharField('*Nro Carta de Porte', max_length=12, blank=True, null=True, unique=True)
     codigo_especie = models.ForeignKey('Especie', verbose_name='*Codigo Especie', blank=True, null=True)
     cuit_remitente = models.ForeignKey(Entidad, verbose_name='Cuit Remitente Comercial', related_name='ctg_remitente', blank=True, null=True)
     #cuit_remitente = models.CharField('Cuit Remitente Comercial', max_length=11, null=True, blank=True)
@@ -247,7 +262,7 @@ class CTG(models.Model):
     accion = models.IntegerField('Accion', choices=CTG_ACCION, default=1)
     operacion = models.ForeignKey('Operacion', null=True, blank=True, related_name='ctg')
     nombre = models.CharField('Nombre de CTG', null=True, blank=True, max_length=50)
-    fecha = models.DateTimeField('Fecha de Operacion', default=timezone.localdate, null=True)
+    fecha = models.DateField('Fecha de Operacion', default=timezone.now, null=True)
     
     '''
     def registrar_operacion(self, tipo_operacion):

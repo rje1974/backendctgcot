@@ -262,7 +262,7 @@ class CTG(models.Model):
     accion = models.IntegerField('Accion', choices=CTG_ACCION, default=1)
     operacion = models.ForeignKey('Operacion', null=True, blank=True, related_name='ctg')
     nombre = models.CharField('Nombre de CTG', null=True, blank=True, max_length=50)
-    fecha = models.DateField('Fecha de Operacion', default=timezone.now, null=True)
+    fecha = models.DateTimeField('Fecha de Operacion', default=timezone.now, null=True)
     
     '''
     def registrar_operacion(self, tipo_operacion):

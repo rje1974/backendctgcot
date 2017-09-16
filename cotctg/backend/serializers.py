@@ -90,4 +90,4 @@ class CTGOperatiocionSerializer(ModelSerializer):
 class COTOperatiocionSerializer(ModelSerializer):
     class Meta:
         model = COT
-        fields = ('id', 'fecha',)
+        fields = ('id', 'fecha','codigo_unico', 'numero_comprobante')

@@ -12,6 +12,8 @@ from backend.constants import WSCTG_WSDL, CTG_ESTADO_GENERADO\
     , CTG_ESTADO_PENDIENTE, CTG_ESTADO_ANULADO,\
     CTG_ESTADO_ARRIBADO, CTG_ACCION_SOLICITAR, CTG_ACCION_PARCIAL,\
     COT_ESTADO_PENDIENTE, COT_ESTADO_GENERADO
+from cotctg.settings import AFIP_CERT, AFIP_KEY
+from backend.utils import obtener_afip_token
 
 
 def user_directory_path(instance, filename):
@@ -24,32 +26,12 @@ class Credencial(models.Model):
     Representa las credenciales de autenticacion del usuario ante AFIP y ARBA
     '''
     usuario = models.OneToOneField(User, on_delete=models.CASCADE, related_name='credenciales')
-    key = models.FileField('Clave Privada', upload_to=user_directory_path)
-    certificado = models.FileField('Certificado', upload_to=user_directory_path)
-    certificado_texto = models.TextField('Text de Certificado', blank=True)
-    wsaa_token = models.FileField('Token WSAA (TA)', blank=True)
-
+    usuario_arba = models.CharField('Usuario ARBA', max_length=12)
+    pass_arba = models.CharField('Contrasena ARBA', max_length=30)
+    
     class Meta:
-        verbose_name = 'Credenciales AFIP'
-        verbose_name_plural = 'Credenciales AFIP'
-
-    def _get_key_file(self):
-        pass
-    
-    
-    def _get_cert_file(self):
-        pass
-    
-    @classmethod
-    def obtener_afip_token(self):
-        cert = '/home/hugo/development/cotctg/cotctg/backend/ctg.crt' 
-        key = '/home/hugo/development/cotctg/cotctg/backend/privada.key'
-        wsaa = WSAA()
-        wsaa.HOMO = HOMO
-        wsaa.DEBUG = DEBUG
-        wsaa.WSAAURL = WSAA_URL
-        self.wsaa_token = wsaa.Autenticar("wsctg", cert, key, wsdl=WSAA_WSDL, debug=DEBUG, cacert=CACERT)
-        return self.wsaa_token
+        verbose_name = 'Credenciales'
+        verbose_name_plural = 'Credenciales'
 
 
 class Entidad(models.Model):
@@ -287,7 +269,7 @@ class CTG(models.Model):
     
     def anular_ctg(self):
         if self.numero_carta_de_porte and self.numero_ctg:
-            token = self.usuario_solicitante.credenciales.obtener_afip_token()
+            token = obtener_afip_token()
             wsctg = WSCTG()
             wsctg.HOMO = HOMO
             wsctg.WSDL = WSCTG_WSDL
@@ -316,9 +298,9 @@ class CTG(models.Model):
             self.estado = CTG_ESTADO_GENERADO
     
     def solicitar_ctg(self):
-        return self._simular_ctg()
+        #return self._simular_ctg()
         
-        token = self.usuario_solicitante.credenciales.obtener_afip_token()
+        token = obtener_afip_token()
         wsctg = WSCTG()
         wsctg.HOMO = HOMO
         wsctg.WSDL = WSCTG_WSDL

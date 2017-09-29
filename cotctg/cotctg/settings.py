@@ -27,6 +27,10 @@ ALLOWED_HOSTS = ['*']
 
 SITE_ID = 1
 
+# Credenciales AFIP
+AFIP_CERT = os.path.join(BASE_DIR, 'data/cert/ctg.crt')
+AFIP_KEY = os.path.join(BASE_DIR, 'data/cert/privada.key')
+
 # Application definition
 INSTALLED_APPS = (
     'django.contrib.admin',
@@ -115,9 +119,9 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/1.11/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es-ar'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'America/Argentina/Buenos_Aires'
 
 USE_I18N = True
 

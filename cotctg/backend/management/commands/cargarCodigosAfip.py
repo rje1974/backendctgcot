@@ -4,12 +4,11 @@ Created on 31 ago. 2017
 @author: root
 '''
 from django.core.management.base import BaseCommand
-from django.contrib.auth.models import User
-from pyafipws.wsctg import WSCTG
 from backend.constants import CUIT_SOLICITANTE
 from backend.models import Cosecha, Especie, Establecimiento, Provincia,\
     Localidad
 from backend.utils import obtener_afip_token
+from backend.clients import get_wsctg_client
 
 
 class Command(BaseCommand):
@@ -18,7 +17,7 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         self.stdout.write('Conectando a WS AFIP')
         token = obtener_afip_token()
-        wsctg = WSCTG()
+        wsctg = get_wsctg_client()
         wsctg.Conectar()
         wsctg.SetTicketAcceso(token)
         wsctg.Cuit = CUIT_SOLICITANTE

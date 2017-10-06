@@ -3,7 +3,8 @@ from cotctg.settings import AFIP_HOMO
 # Constantes WebService AFIP
 
 
-CUIT_SOLICITANTE = 20244416722
+# CUIT_SOLICITANTE = 20244416722
+CUIT_SOLICITANTE = 30552651282
 CACERT = 'afip_ca_info.crt'
 
 

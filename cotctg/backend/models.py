@@ -2,18 +2,14 @@
 from __future__ import unicode_literals
 from django.contrib.auth.models import User
 from django.db import models
-from pyafipws.wsaa import WSAA
-from pyafipws.wsctg import WSCTG
-from pyafipws.cot import COT as WSCOT
-from .constants import HOMO, DEBUG, CUIT_SOLICITANTE
+from .constants import HOMO, CUIT_SOLICITANTE
 from django.utils import timezone
-from .constants import WSAA_WSDL, WSAA_URL, CACERT
 from backend.constants import WSCTG_WSDL, CTG_ESTADO_GENERADO\
     , CTG_ESTADO_PENDIENTE, CTG_ESTADO_ANULADO,\
     CTG_ESTADO_ARRIBADO, CTG_ACCION_SOLICITAR, CTG_ACCION_PARCIAL,\
     COT_ESTADO_PENDIENTE, COT_ESTADO_GENERADO
-from cotctg.settings import AFIP_CERT, AFIP_KEY
 from backend.utils import obtener_afip_token
+from backend.clients import get_wscot_client, get_wsctg_client
 
 
 def user_directory_path(instance, filename):
@@ -162,9 +158,7 @@ class COT(models.Model):
         
     def solicitar_cot(self):
         archivo = self.generar_archivo()
-        cot = WSCOT()
-        cot.Usuario = '20244416722'
-        cot.Password = '431108'
+        cot = get_wscot_client('20244416722', '431108')
         cot.Conectar()
         cot.PresentarRemito('/home/hugo/development/cotctg/cotctg/' + archivo.name)
         self.numero_comprobante = cot.NumeroComprobante
@@ -270,7 +264,7 @@ class CTG(models.Model):
     def anular_ctg(self):
         if self.numero_carta_de_porte and self.numero_ctg:
             token = obtener_afip_token()
-            wsctg = WSCTG()
+            wsctg = get_wsctg_client()
             wsctg.HOMO = HOMO
             wsctg.WSDL = WSCTG_WSDL
             wsctg.Conectar()
@@ -301,9 +295,7 @@ class CTG(models.Model):
         #return self._simular_ctg()
         
         token = obtener_afip_token()
-        wsctg = WSCTG()
-        wsctg.HOMO = HOMO
-        wsctg.WSDL = WSCTG_WSDL
+        wsctg = get_wsctg_client()
         wsctg.Conectar()
         wsctg.SetTicketAcceso(token)
         wsctg.Cuit = CUIT_SOLICITANTE

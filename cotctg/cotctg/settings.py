@@ -28,8 +28,8 @@ ALLOWED_HOSTS = ['*']
 SITE_ID = 1
 
 # Credenciales AFIP
-AFIP_CERT = os.path.join(BASE_DIR, 'data/cert/CTG APP_3342091268d19eab.crt')
-AFIP_KEY = os.path.join(BASE_DIR, 'data/cert/privada.key')
+AFIP_CERT = os.path.join(BASE_DIR, 'data/cert/ctgapp_7fada6e01ca86622.crt')
+AFIP_KEY = os.path.join(BASE_DIR, 'data/cert/ctgapp.key')
 AFIP_HOMO = False
 AFIP_CLIENT_DEBUG = True
 

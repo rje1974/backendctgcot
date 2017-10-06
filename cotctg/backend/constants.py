@@ -1,7 +1,7 @@
 
 # Constantes WebService AFIP
 
-AFIP_DEBUG = True
+AFIP_DEBUG = False
 CUIT_SOLICITANTE = 20244416722
 CACERT = 'afip_ca_info.crt'
 

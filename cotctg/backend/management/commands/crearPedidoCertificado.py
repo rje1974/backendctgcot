@@ -15,6 +15,6 @@ class Command(BaseCommand):
         res = wsaa.CrearClavePrivada('ctgapp.key')
         self.stdout.write('resultado: {}'.format(res))
         self.stdout.write('Creando Pedido de Certificado')
-        res = wsaa.CrearPedidoCertificado(cuit='20244416722', empresa='RIVA JUAN EDUARDO', nombre='ctgapp', filename='ctgapp.key')
+        res = wsaa.CrearPedidoCertificado(cuit='20244416722', empresa='RIVA JUAN EDUARDO', nombre='ctgapp', filename='ctgapp.csr')
         self.stdout.write('resultado: {}'.format(res))
         self.stdout.write('Fin')

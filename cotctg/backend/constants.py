@@ -2,9 +2,17 @@ from cotctg.settings import AFIP_HOMO
 
 # Constantes WebService AFIP
 
+CUIT_SOLICITANTE = 20244416722
+#CUIT_SOLICITANTE = 30552651282
+'''
+TODO:
+Al ingresar otro CUIT Solicitante que no sea 20244416722, recibo el mensaje:
+ 
+La CUIT del usuario representante 20244416722 no corresponde a una CUIT habilitada por el Administrador de Relaciones de la AFIP para el Contribuyente 30552651282.
 
-# CUIT_SOLICITANTE = 20244416722
-CUIT_SOLICITANTE = 30552651282
+'''
+
+
 CACERT = 'afip_ca_info.crt'
 
 

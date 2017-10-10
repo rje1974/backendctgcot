@@ -10,18 +10,20 @@ from backend.constants import HOMO, WSCTG_WSDL, WSAA_URL
 
 
 def get_wsctg_client():
-        wsctg.HOMO = HOMO
-        wsctg.WSDL = WSCTG_WSDL
-        wsctg.DEBUG = AFIP_CLIENT_DEBUG
-        return wsctg.WSCTG()
+    obj = wsctg.WSCTG()
+    obj.HOMO = HOMO
+    obj.WSDL = WSCTG_WSDL
+    obj.DEBUG = AFIP_CLIENT_DEBUG
+    return obj
 
 
-def get_wsaa_client():        
+def get_wsaa_client():
+    obj = wsaa.WSAA()       
     wsaa.HOMO = HOMO
     wsaa.WSDL = WSCTG_WSDL
     wsaa.DEBUG = AFIP_CLIENT_DEBUG
     wsaa.WSAAURL = WSAA_URL
-    return wsaa.WSAA()
+    return obj 
 
 
 def get_wscot_client(usuario, contrasena):

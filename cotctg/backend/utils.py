@@ -11,6 +11,5 @@ from backend.clients import get_wsaa_client
 
 def obtener_afip_token():
     wsaa = get_wsaa_client()
-    import ipdb; ipdb.set_trace()
     wsaa_token = wsaa.Autenticar("wsctg", AFIP_CERT, AFIP_KEY, wsdl=WSAA_WSDL, cacert=CACERT)
     return wsaa_token

@@ -11,7 +11,7 @@ from backend.serializers import CTGSerializer, LocalidadSerializer,\
 from backend.models import CTG, Localidad, Entidad, Cosecha, Especie,\
     Establecimiento, COT
 from rest_framework.response import Response
-from backend.constants import CTG_ESTADO_PENDIENTE
+from backend.constants import CTG_ESTADO_PENDIENTE, CTG_ESTADO_GENERADO
 
 
 class COTViewSet(ModelViewSet):
@@ -59,33 +59,23 @@ class CTGViewSet(ModelViewSet):
         print request.data
         request.data['usuario_solicitante'] = request.user.id
         request.data['estado'] = CTG_ESTADO_PENDIENTE
-        
-        '''
+        # TODO: Pulir logica respecto a CTG parcial
         if self._check_required_fields(request.data):
             # Guardo y genero CTG
             
-            especie_obj = Especie.objects.get(codigo=request.data['codigo_especie'])
-            cosecha_obj = Cosecha.objects.get(codigo=request.data['codigo_cosecha'])
             destino_obj, destino_obj_created = Entidad.objects.get_or_create(cuit=request.data['cuit_destino'])
             destinatario_obj, destinatario_obj_created = Entidad.objects.get_or_create(cuit=request.data['cuit_destinatario'])
-            localidad_origen_obj = Localidad.objects.get(codigo=request.data['codigo_localidad_origen'])
-            localidad_destino_obj = Localidad.objects.get(codigo=request.data['codigo_localidad_destino'])
             transportista_obj, transportista_obj_created = Entidad.objects.get_or_create(cuit=request.data['cuit_transportista'])
             
-            request.data['codigo_especie'] = especie_obj.id
-            request.data['cuit_destino'] = destino_obj.id
-            request.data['cuit_destinatario'] = destinatario_obj.id
-            request.data['cuit_transportista'] = transportista_obj.id
-            request.data['codigo_cosecha'] = cosecha_obj.id
-            request.data['codigo_localidad_origen'] = localidad_origen_obj.id
-            request.data['codigo_localidad_destino']= localidad_destino_obj.id
+            request.data['cuit_destino'] = destino_obj.cuit
+            request.data['cuit_destinatario'] = destinatario_obj.cuit
+            request.data['cuit_transportista'] = transportista_obj.cuit
             
         if request.data['cuit_remitente']:
             remitente_obj, remitente_obj_created = Entidad.objects.get_or_create(cuit=request.data['cuit_remitente'])
-            request.data['cuit_remitente'] = remitente_obj.id 
-        '''
+            request.data['cuit_remitente'] = remitente_obj.cuit 
         return super(CTGViewSet, self).create(request, *args, **kwargs)
-        '''
+
         response = super(CTGViewSet, self).create(request, *args, **kwargs)
         if response.data.get('estado') == CTG_ESTADO_GENERADO:
             resp = {}
@@ -97,7 +87,6 @@ class CTGViewSet(ModelViewSet):
             resp['tarifareferencia'] = response.data.get('tarifareferencia')
             return Response(resp)
         return Response('CTG Creado parcialmente')
-        '''
     
     def _check_required_fields(self, data):
         post_fields = data

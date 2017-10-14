@@ -7,6 +7,7 @@ from rest_framework.serializers import ModelSerializer
 from backend.models import Localidad, Provincia, CTG, Entidad, Cosecha, Especie,\
     Establecimiento, COT
 from backend.constants import CTG_ACCION_SOLICITAR, COT_ACCION_SOLICTAR
+from rest_framework_friendly_errors.mixins import FriendlyErrorMessagesMixin
 
 
 class ProvinciaSerializer(ModelSerializer):
@@ -31,7 +32,7 @@ class LocalidadSerializer(ModelSerializer):
         return rep 
 
 
-class COTSerializer(ModelSerializer):
+class COTSerializer(FriendlyErrorMessagesMixin, ModelSerializer):
     class Meta:
         model = COT
         fields = '__all__'
@@ -43,7 +44,7 @@ class COTSerializer(ModelSerializer):
         return obj
         
         
-class CTGSerializer(ModelSerializer):
+class CTGSerializer(FriendlyErrorMessagesMixin, ModelSerializer):
     class Meta:
         model = CTG
         fields = '__all__'
@@ -57,7 +58,7 @@ class CTGSerializer(ModelSerializer):
         return obj
     
         
-class EntidadSerializer(ModelSerializer):
+class EntidadSerializer(FriendlyErrorMessagesMixin, ModelSerializer):
     class Meta:
         model = Entidad
         fields = ('usuario_solicitante', 'nombre', 'cuit',)

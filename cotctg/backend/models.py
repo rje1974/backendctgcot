@@ -7,9 +7,10 @@ from django.utils import timezone
 from backend.constants import WSCTG_WSDL, CTG_ESTADO_GENERADO\
     , CTG_ESTADO_PENDIENTE, CTG_ESTADO_ANULADO,\
     CTG_ESTADO_ARRIBADO, CTG_ACCION_SOLICITAR, CTG_ACCION_PARCIAL,\
-    COT_ESTADO_PENDIENTE, COT_ESTADO_GENERADO
+    COT_ESTADO_PENDIENTE, COT_ESTADO_GENERADO, CTG_ESTADO_ERROR
 from backend.utils import obtener_afip_token
 from backend.clients import get_wscot_client, get_wsctg_client
+import json
 
 
 def user_directory_path(instance, filename):
@@ -251,8 +252,8 @@ class CTG(models.Model):
     
     def save(self, **kwargs):
         # Parche para solicitar cuando se crea registro desde Admin
-        if (self.estado==CTG_ESTADO_PENDIENTE and self.accion==CTG_ACCION_SOLICITAR):
-            self.solicitar_ctg()
+#         if (self.estado==CTG_ESTADO_PENDIENTE and self.accion==CTG_ACCION_SOLICITAR):
+#             self.solicitar_ctg()
         return super(CTG, self).save(**kwargs)
     
     def has_related_object(self, related_name):
@@ -329,11 +330,18 @@ class CTG(models.Model):
         self.vigenciadesde = wsctg.VigenciaDesde
         self.vigenciahasta = wsctg.VigenciaHasta
         self.tarifareferencia = wsctg.TarifaReferencia
-        self.errores = wsctg.Errores
+        self.errores = json.dumps(self.proccess_errors(wsctg.Errores))
         self.controles = wsctg.Controles
-        # TODO: Revisar correcta logica
-        if not self.controles:
+        if self.numero_ctg:
             self.estado = CTG_ESTADO_GENERADO
+        if self.errores:
+            self.estado = CTG_ESTADO_ERROR
+    
+    def proccess_errors(self, afip_errors):
+        ret = []
+        for error in afip_errors:
+            ret.append(str(error.replace('<br>', '\n')))
+        return ret
     
     class Meta:
         verbose_name = 'CTG'

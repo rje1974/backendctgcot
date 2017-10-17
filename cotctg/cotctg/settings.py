@@ -23,6 +23,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '8i4c=su!t-v+2c)jbrk)qo=)+=#amhkw8j(k&h9-n!=qvulm(%'
 
+ALLOWED_HOSTS = ['104.131.70.120']
 
 SITE_ID = 1
 

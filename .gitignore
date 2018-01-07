@@ -1,6 +1,8 @@
 local_settings.py
 *.pyc
 /media
-/static
+*/static
 /.metadata/
 *.db
+*/cotctg.ini
+*/wsgi.py

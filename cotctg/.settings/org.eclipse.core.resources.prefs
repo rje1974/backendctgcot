@@ -1,5 +1,13 @@
 eclipse.preferences.version=1
 encoding//backend/admin.py=utf-8
 encoding//backend/apps.py=utf-8
+encoding//backend/migrations/0001_initial.py=utf-8
+encoding//backend/migrations/0003_auto_20171017_1706.py=utf-8
+encoding//backend/migrations/0004_auto_20171017_1807.py=utf-8
+encoding//backend/migrations/0005_auto_20171019_2101.py=utf-8
+encoding//backend/migrations/0006_auto_20171019_2110.py=utf-8
+encoding//backend/migrations/0007_auto_20171019_2132.py=utf-8
+encoding//backend/migrations/0008_auto_20171019_2140.py=utf-8
+encoding//backend/migrations/0009_auto_20171029_1806.py=utf-8
 encoding//backend/models.py=utf-8
 encoding//backend/views.py=utf-8

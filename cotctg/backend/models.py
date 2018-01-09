@@ -7,10 +7,14 @@ from django.utils import timezone
 from backend.constants import WSCTG_WSDL, CTG_ESTADO_GENERADO\
     , CTG_ESTADO_PENDIENTE, CTG_ESTADO_ANULADO,\
     CTG_ESTADO_ARRIBADO, CTG_ACCION_SOLICITAR, CTG_ACCION_PARCIAL,\
-    COT_ESTADO_PENDIENTE, COT_ESTADO_GENERADO, CTG_ESTADO_ERROR
+    COT_ESTADO_PENDIENTE, COT_ESTADO_GENERADO, CTG_ESTADO_ERROR, ARBA_MEDIDAS,\
+    ARBA_COMPROBANTES, ARBA_PROVINCIAS, COT_ESTADO_ERROR
 from backend.utils import obtener_afip_token
 from backend.clients import get_wscot_client, get_wsctg_client
 import json
+from cotctg.settings import BASE_DIR
+import os
+from django.core.validators import MaxValueValidator
 
 
 def user_directory_path(instance, filename):
@@ -22,9 +26,14 @@ class Credencial(models.Model):
     '''
     Representa las credenciales de autenticacion del usuario ante AFIP y ARBA
     '''
-    usuario = models.OneToOneField(User, on_delete=models.CASCADE, related_name='credenciales')
-    usuario_arba = models.CharField('Usuario ARBA', max_length=12)
-    pass_arba = models.CharField('Contrasena ARBA', max_length=30)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='credenciales', null=True)
+    usuario_arba = models.CharField('Usuario ARBA', max_length=12, blank=True)
+    pass_arba = models.CharField('Contrasena ARBA', max_length=30, blank=True)
+    cuit_solicitante = models.BigIntegerField('CUIT Solicitante', validators=[MaxValueValidator(99999999999)], null=True, blank=True)
+    credenciales_produccion = models.BooleanField('Credenciales en Produccion', default=True)
+    
+    def __unicode__(self):
+        return "Credenciales de {}".format(self.user)
     
     class Meta:
         verbose_name = 'Credenciales'
@@ -50,17 +59,6 @@ class Entidad(models.Model):
         verbose_name_plural = 'Entidades'
         
         
-class Provincia_ARBA(models.Model):
-    codigo = models.CharField('Codigo', max_length=1, primary_key=True)
-    descripcion = models.CharField('Nombre', max_length=25)
-    
-    def __unicode__(self):
-        return self.descripcion
-    
-    class Meta:
-        verbose_name = 'Provicia ARBA'
-        verbose_name_plural = 'Provincias ARBA'
-        
         
 class COT(models.Model):
     '''
@@ -84,29 +82,24 @@ class COT(models.Model):
             ('SI', 'Si'),
             ('NO', 'No')
         )
-    ARBA_MEDIDAS = (
-        (1, 'Kilogramos'),
-        (2, 'Litros'),
-        (3, 'Unidades'),
-        (4, 'Metros Cuadrados'),
-        (5, 'Metros'),
-        (6, 'Metros Cubicos'),
-        (7, 'Pares'),        
-        )
+
     ARBA_DATE_FORMAT = ('%Y%m%%d')
     
     usuario_solicitante = models.ForeignKey(User, verbose_name='Usuario Solicitante')
     cuit_empresa = models.CharField('CUIT Empresa', max_length=11)
-    fecha_emision = models.CharField('Fecha Emision (AAAAMMDD)', max_length=8, blank=True)
-    codigo_unico = models.CharField('Codigo Unico (Carta de Porte)', max_length=16)
+    fecha_emision = models.CharField('Fecha Emision (AAAAMMDD)', max_length=8)
+    tipo_comprobante = models.CharField('Tipo de Comprobante', max_length=4, choices=ARBA_COMPROBANTES)
+    nro_comprobante = models.BigIntegerField('Nro Comprobante', validators=[MaxValueValidator(999999999999)])
     fecha_salida_transporte = models.CharField('Fecha Salida Transporte (AAAAMMDD)', max_length=8)
     sujeto_generador = models.CharField('Sujeto Generador', choices=SUJETO_GENERADOR, max_length=1)
     destinatario_consumidor_final = models.BooleanField('Destinatario Consumidor Final?')
     destinatario_tenedor = models.BooleanField('Destinatario es Tenedor')
+    destinatario_razon_social = models.CharField('Destinatario Razon Social', max_length=50, blank=True, null=True)
+    destinatario_cuit = models.BigIntegerField('Destinatario Cuit', validators=[MaxValueValidator(99999999999)], blank=True, null=True)
     destino_domicilio_calle = models.CharField('Destino: Calle de Domicilio', max_length=40)
     destino_domicilio_codigopostal = models.CharField('Destino: Codigo Postal', max_length=8)
     destino_domicilio_localidad = models.CharField('Destino: Localidad', max_length=50)
-    destino_domicilio_provincia = models.ForeignKey('Provincia_ARBA', related_name='provincia_destino')
+    destino_domicilio_provincia = models.CharField('Provincia Destino', max_length=1, choices=ARBA_PROVINCIAS)
     entrega_domicilio_origen = models.CharField('Entrega Domicilio Origen', choices=SI_NO, max_length=2)
     origen_cuit = models.CharField('Origen CUIT', max_length=11)
     origen_razon_social = models.CharField('Origen: Razon Social', max_length=50)
@@ -114,8 +107,9 @@ class COT(models.Model):
     origen_domicilio_calle = models.CharField('Origen: Calle de Domicilio', max_length=40)
     origen_domicilio_codigopostal = models.CharField('Origen: Domicilio Codigo Postal', max_length=8)
     origen_domicilio_localidad = models.CharField('Origen: Localidad', max_length=50)
-    origen_domicilio_provincia = models.ForeignKey('Provincia_ARBA', related_name='provincia_origen')
+    origen_domicilio_provincia = models.CharField('Provincia Origen', max_length=1, choices=ARBA_PROVINCIAS)
     transportista_cuit = models.CharField('CUIT Transportista', max_length=11)
+    patente_vehiculo = models.CharField('Patente Vehiculo', max_length=7, blank=True, default=' ', null=True)
     producto_no_term_dev = models.BooleanField('Productos No Terminados / Devoluciones', default=False)
     importe = models.CharField('Importe', max_length=10)
     codigo_unico_producto = models.CharField('Codigo Unico Producto', max_length=6)
@@ -132,36 +126,106 @@ class COT(models.Model):
     codigo_integridad = models.CharField('Codigo Integridad', max_length=50, blank=True)
     errores = models.TextField('Errores', blank=True)
     estado = models.IntegerField('Estado del COT', choices=COT_ESTADO, default=1, blank=True, null=True)
+    file_path = models.CharField('Archivo de Intercambio', max_length=200)
     
     def __unicode__(self):
         return 'Fecha: {}, Nombre: {}, Nro Comprobante: {}'.format(self.fecha, self.cot_nombre, self.numero_comprobante)
         
+    def _procesar_condicionales(self, val):
+        # Funcion encargada de ajustar los campos condicionales de acuerdo\
+        # a los requerimientos de ARBA
+        if val:
+            return val
+        else:
+            return ' '
+        
+    def _procesar_booleanos(self, val):
+        # Funcion encargada de ajustar los campos booleano de acuerdo\
+        # a los requerimientos de ARBA
+        if val:
+            return '1'
+        else:
+            return '0'
+        
+        
     def generar_archivo(self):
+#         registro02 = '02|20080124|91 R999900068148|20080124| |E|0| | |30682115722|COMPUMUNDOS.A.|0|Ruta Prov | |S/N| | | |1200|PUERTO DE ESCOBAR|B| |NO|23246414254|COMPUMUNDO S.A.|0|San Martin 5797| |S/N| | | |1766|TABLADA|B|20045162673| | | | | | |1|1234\r\n'.format()
+#         registro02 += '0| | |30682115722|COMPUMUNDOS.A.|0|Ruta Prov | |S/N| | | |1200|PUERTO DE ESCOBAR|B| |NO|23246414254|COMPUMUNDO S.A.|0|San Martin 5797| |S/N| | | |1766|TABLADA|B|20045162673| | | | | | |1|1234\r\n'.format()
+#         registro03 = '03|847150|3|100|23891|COMP. SP-3960 VP|UNI DAD| 100\r\n'
         registro01 = '01|{}\r\n'.format(self.cuit_empresa)
-        '''
-        registro02 = '02|{fecha_emision}|91 R999900068148|{fecha_salida_transporte}| |{sujeto_generador}|0| | |30682115722|COMPUMUNDOS.A.|0|Ruta Prov | |S/N| | | |1200|PUERTO DE ESCOBAR|B| |NO|20244416722|COMPUMUNDO S.A.|0|San Martin 5797| |S/N| | | |1766|TABLADA|B|20045162673| | | | | | |1|1234\r'
-        registro02 += '\n'
-        registro02.format(fecha_emision=self.fecha_emision,
-                          fecha_salida_transporte=self.fecha_salida_transporte,
-                          sujeto_generador=self.sujeto_generador)
-        '''
-        registro02 = '02|20080124|91 R999900068148|20080124| |E|0| | |30682115722|COMPUMUNDOS.A.|0|Ruta Prov | |S/N| | | |1200|PUERTO DE ESCOBAR|B| |NO|23246414254|COMPUMUNDO S.A.|0|San Martin 5797| |S/N| | | |1766|TABLADA|B|20045162673| | | | | | |1|1234\r\n'
-
-        registro03 = '03|847150|3|100|23891|COMP. SP-3960 VP|UNI DAD| 100\r\n'
-        registro04 = '04|1\r\n'
-        archivo = open('TB_20244416722_000000_20170914_000001.txt', 'w+')
+        registro02 = '02|{}|'.format(self.fecha_emision)
+        registro02 += '{}{}|'.format(self.tipo_comprobante, self.nro_comprobante)
+        registro02 += '{}|'.format(self.fecha_salida_transporte)
+        registro02 += ' |' # HORA_SALIDA_TRANSPORTE  
+        registro02 += '{}|'.format(self.sujeto_generador)
+        registro02 += '{}|'.format(self._procesar_booleanos(self.destinatario_consumidor_final))
+        registro02 += ' |' # DESTINATARIO_TIPO_DOCUMENT
+        registro02 += ' |' # DESTINATARIO_DOCUMENTO
+        registro02 += '{}|'.format(self._procesar_condicionales(self.destinatario_cuit))
+        registro02 += '{}|'.format(self._procesar_condicionales(self.destinatario_razon_social))
+        registro02 += '{}|'.format(self._procesar_booleanos(self.destinatario_tenedor))
+        registro02 += '{}|'.format(self.destino_domicilio_calle)
+        registro02 += '0|' # DESTINO_DOMICILIO_NUMERO
+        registro02 += 'S/N|' # DESTINO_DOMICILIO_COMPLE
+        registro02 += ' |' # DESTINO_DOMICILIO_PISO
+        registro02 += ' |' # DESTINO_DOMICILIO_DTO
+        registro02 += ' |' # DESTINO_DOMICILIO_BARRIO
+        registro02 += '{}|'.format(self.destino_domicilio_codigopostal) 
+        registro02 += '{}|'.format(self.destino_domicilio_localidad)
+        registro02 += '{}|'.format(self.destino_domicilio_provincia)
+        registro02 += ' |' # PROPIO_DESTINO_DOMICILIO_CODIGO
+        registro02 += '{}|'.format(self.entrega_domicilio_origen)
+        registro02 += '{}|'.format(self.origen_cuit)
+        registro02 += '{}|'.format(self.origen_razon_social)
+        registro02 += '{}|'.format(self._procesar_booleanos(self.emisor_tenedor))
+        registro02 += '{}|'.format(self.origen_domicilio_calle)
+        registro02 += '0|' # ORIGEN_DOMICILIO_NUMERO
+        registro02 += 'S/N|' # ORIGEN_DOMICILIO_COMPLE
+        registro02 += ' |' # ORIGEN_DOMICILIO_PISO
+        registro02 += ' |' # ORIGEN_DOMICILIO_DTO
+        registro02 += ' |' # ORIGEN_DOMICILIO_BARRIO
+        registro02 += '{}|'.format(self.origen_domicilio_codigopostal)
+        registro02 += '{}|'.format(self.origen_domicilio_localidad)
+        registro02 += '{}|'.format(self.origen_domicilio_provincia)
+        registro02 += '{}|'.format(self.transportista_cuit)
+        registro02 += ' |' # TIPO_RECORRIDO
+        registro02 += ' |' # RECORRIDO_LOCALIDAD
+        registro02 += ' |' # RECORRIDO_CALLE
+        registro02 += ' |' # RECORRIDO_RUTA
+        registro02 += '{}|'.format(self._procesar_condicionales(self.patente_vehiculo))
+        registro02 += ' |' # PATENTE_ACOPLADO
+        registro02 += '{}|'.format(self._procesar_booleanos(self.producto_no_term_dev))
+        registro02 += '{}\r\n'.format(self._procesar_condicionales(self.importe))
+        
+        registro03 = '03|{}|'.format(self.codigo_unico_producto)
+        registro03 += '{}|'.format(self.rentas_codigo_unidad_medida)
+        registro03 += '{}|'.format(self.cantidad)
+        registro03 += '{}|'.format(self.propio_codigo_producto)
+        registro03 += '{}|'.format(self.propio_descripcion_producto)
+        registro03 += '{}|'.format(self.propio_descripcion_unidad_medida)
+        registro03 += '{}\r\n'.format(self.cantidad_ajustada)
+        
+        registro04 = '04|1\r\n' # Cantidad total de remitos
+        
+        file_name = 'TB_{}_000000_{}_000001.txt'.format(self.cuit_empresa, self.fecha_emision)
+        self.file_path = os.path.join(BASE_DIR, 'data/arba', file_name)
+        archivo = open(self.file_path, 'w+')
         archivo.write(registro01)
         archivo.write(registro02)
         archivo.write(registro03)
         archivo.write(registro04)
         archivo.close()
-        return archivo
+        
+    def procesar_errores(self, errores):
+        errores = errores.replace('_', ' ').replace('Mensaje Error', 'mensaje_error')
+        errores = errores.replace('inv??lido', 'inválido') 
+        return errores
         
     def solicitar_cot(self):
-        archivo = self.generar_archivo()
+        self.generar_archivo()
         cot = get_wscot_client('20244416722', '431108')
         cot.Conectar()
-        cot.PresentarRemito('/home/hugo/development/cotctg/cotctg/' + archivo.name)
+        cot.PresentarRemito(self.file_path)
         self.numero_comprobante = cot.NumeroComprobante
         self.codigo_integridad = cot.CodigoIntegridad
         errores = []
@@ -172,13 +236,15 @@ class COT(models.Model):
                 remito['Codigo Error'] = cot.CodigoError
                 remito['Mensaje Error'] = cot.MensajeError
                 errores.append(remito)
-        if not errores:
+        self.errores = self.procesar_errores(json.dumps(errores))
+        if not errores and self.numero_comprobante:
             self.estado = COT_ESTADO_GENERADO
-            
-    def save(self, **kwargs):
-        if self.generar_cot and not self.numero_comprobante:
-            self.solicitar_cot()
-        return super(COT, self).save(**kwargs)
+        else:
+            self.estado = COT_ESTADO_ERROR
+#     def save(self, **kwargs):
+#         if self.generar_cot and not self.numero_comprobante:
+#             self.solicitar_cot()
+#         return super(COT, self).save(**kwargs)
         
     class Meta:
         verbose_name = 'COT'
@@ -330,14 +396,14 @@ class CTG(models.Model):
         self.vigenciadesde = wsctg.VigenciaDesde
         self.vigenciahasta = wsctg.VigenciaHasta
         self.tarifareferencia = wsctg.TarifaReferencia
-        self.errores = json.dumps(self.proccess_errors(wsctg.Errores))
+        self.errores = json.dumps(self.procesar_errores(wsctg.Errores))
         self.controles = wsctg.Controles
         if self.numero_ctg:
             self.estado = CTG_ESTADO_GENERADO
         if self.errores:
             self.estado = CTG_ESTADO_ERROR
     
-    def proccess_errors(self, afip_errors):
+    def procesar_errores(self, afip_errors):
         ret = []
         for error in afip_errors:
             ret.append(str(error.replace('<br>', '\n')))

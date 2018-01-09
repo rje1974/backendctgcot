@@ -20,7 +20,7 @@ from rest_framework import routers
 from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 from backend.viewsets import CTGViewSet, LocalidadViewSet, EntidadViewSet,\
     CosechaViewSet, EspecieViewSet, EstablecimientoViewSet, OperacionViewSet,\
-    COTViewSet
+    COTViewSet, CredencialViewSet
 
 
 router = routers.DefaultRouter()
@@ -32,6 +32,7 @@ router.register('cosechas', CosechaViewSet, base_name='cosechas')
 router.register('especies', EspecieViewSet, base_name='especies')
 router.register('establecimientos', EstablecimientoViewSet, base_name='establecimientos')
 router.register('operaciones', OperacionViewSet, base_name='operaciones')
+router.register('credenciales', CredencialViewSet, base_name='credenciales')
 
 
 urlpatterns = [

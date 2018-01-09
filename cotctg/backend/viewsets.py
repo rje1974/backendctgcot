@@ -7,9 +7,9 @@ from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from backend.serializers import CTGSerializer, LocalidadSerializer,\
     EntidadSerializer, CosechaSerializer, EspecieSerializer,\
     EstablecimientoSerializer, CTGOperatiocionSerializer,\
-    COTOperatiocionSerializer, COTSerializer
+    COTOperatiocionSerializer, COTSerializer, CredencialSerializer
 from backend.models import CTG, Localidad, Entidad, Cosecha, Especie,\
-    Establecimiento, COT
+    Establecimiento, COT, Credencial
 from rest_framework.response import Response
 from backend.constants import CTG_ESTADO_PENDIENTE, CTG_ESTADO_GENERADO
 
@@ -26,8 +26,6 @@ class COTViewSet(ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         request.data['usuario_solicitante'] = request.user.id
-        request.data['cuit_empresa'] = '20244416722'
-        request.data['origen_cuit'] = '20244416722'
         response = ModelViewSet.create(self, request, *args, **kwargs)
         return response
 
@@ -119,11 +117,22 @@ class EntidadViewSet(ModelViewSet):
     def create(self, request, *args, **kwargs):
         request.data['usuario_solicitante'] = request.user.id
         return ModelViewSet.create(self, request, *args, **kwargs)
+    
+
+class CredencialViewSet(ModelViewSet):
+    serializer_class = CredencialSerializer
+    
+    def get_queryset(self):
+        return Credencial.objects.filter(user=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        request.data['user'] = request.user.id
+        return ModelViewSet.create(self, request, *args, **kwargs)
 
 
 class LocalidadViewSet(ReadOnlyModelViewSet):
     serializer_class = LocalidadSerializer
-    queryset = Localidad.objects.all()[:30]
+    queryset = Localidad.objects.all()
     
 
 class CosechaViewSet(ReadOnlyModelViewSet):

@@ -5,9 +5,10 @@ Created on 6 sep. 2017
 '''
 from rest_framework.serializers import ModelSerializer
 from backend.models import Localidad, Provincia, CTG, Entidad, Cosecha, Especie,\
-    Establecimiento, COT
-from backend.constants import CTG_ACCION_SOLICITAR, COT_ACCION_SOLICTAR
+    Establecimiento, COT, Credencial
+from backend.constants import CTG_ACCION_SOLICITAR
 from rest_framework_friendly_errors.mixins import FriendlyErrorMessagesMixin
+from rest_framework.exceptions import ValidationError
 
 
 class ProvinciaSerializer(ModelSerializer):
@@ -32,16 +33,47 @@ class LocalidadSerializer(ModelSerializer):
         return rep 
 
 
+class CredencialSerializer(ModelSerializer):
+    class Meta:
+        model = Credencial
+        exclude = ('credenciales_produccion',)
+
+
 class COTSerializer(FriendlyErrorMessagesMixin, ModelSerializer):
     class Meta:
         model = COT
-        fields = '__all__'
+        exclude = ('file_path',)
 
     def create(self, validated_data):
         obj = COT.objects.create(**validated_data)
         if validated_data.get('generar_cot'):
             obj.solicitar_cot()
         return obj
+    
+    def validate(self, data):
+        """
+        Aplica todas las validaciones necesarias para ARBA.
+        """
+        if data['destinatario_consumidor_final']==0:
+            if not data.get('destinatario_cuit'):
+                raise ValidationError("Si el destinatario no es Consumidor Final, debe ingresar el Cuit del mismo")
+            else:
+                if data['sujeto_generador'] in 'D':
+                    if not data['destinatario_cuit']==data['cuit_empresa']:
+                        raise ValidationError("Si Sujeto Generador es Destinatario, el Cuit Destinatario debe ser igual al Cuit Empresa")
+            if not data.get('destinatario_razon_social'):
+                raise ValidationError('Si el destinatario no es Consumidor Final, debe ingresar la Razon Social del mismo')
+        else:
+            data['destinatario_tenedor']=0
+        if data['sujeto_generador'] in 'E':
+            if not data['origen_cuit'] == data['cuit_empresa']:
+                raise ValidationError('Si Sujeto Generador es Emisor, entonces Origen Cuit debe ser igual a Cuit Empresa')
+        if data['transportista_cuit'] == data['cuit_empresa'] and not data['patente_vehiculo']:
+            raise ValidationError('Si Transportista Cuit es igual a Cuit Empresa, debe ingresar Patente Vehiculo')
+        
+        if not data['importe'] and (data['producto_no_term_dev']==0 or data['origen_cuit'] != data['destinatario_cuit']):
+            raise ValidationError('El valor del importe debe ser mayor a 0')
+        return data
         
         
 class CTGSerializer(FriendlyErrorMessagesMixin, ModelSerializer):
@@ -91,4 +123,4 @@ class CTGOperatiocionSerializer(ModelSerializer):
 class COTOperatiocionSerializer(ModelSerializer):
     class Meta:
         model = COT
-        fields = ('id', 'fecha','codigo_unico', 'numero_comprobante')
+        fields = ('id', 'fecha','tipo_comprobante','nro_comprobante', 'numero_comprobante')

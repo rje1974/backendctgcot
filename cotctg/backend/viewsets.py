@@ -3,13 +3,14 @@ Created on 6 sep. 2017
 
 @author: Hugo Chavero
 '''
+import datetime
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from backend.serializers import CTGSerializer, LocalidadSerializer,\
     EntidadSerializer, CosechaSerializer, EspecieSerializer,\
     EstablecimientoSerializer, CTGOperatiocionSerializer,\
     COTOperatiocionSerializer, COTSerializer, CredencialSerializer
 from backend.models import CTG, Localidad, Entidad, Cosecha, Especie,\
-    Establecimiento, COT, Credencial
+    Establecimiento, COT, Credencial, Provincia
 from rest_framework.response import Response
 from backend.constants import CTG_ESTADO_PENDIENTE, CTG_ESTADO_GENERADO
 
@@ -26,9 +27,18 @@ class COTViewSet(ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         request.data['usuario_solicitante'] = request.user.id
-        response = ModelViewSet.create(self, request, *args, **kwargs)
-        return response
+        request.data['fecha_emision'] = self._normalizar_fecha(request.data['fecha_emision'])
+        dpc = request.data.get('destino_domicilio_provincia')
+        opc = request.data.get('origen_domicilio_provincia')
+        request.data['destino_domicilio_provincia'] = Provincia.objects.get(codigo=dpc).codigo_arba
+        request.data['origen_domicilio_provincia'] = Provincia.objects.get(codigo=opc).codigo_arba
+        request.data['fecha_salida_transporte'] = self._normalizar_fecha(request.data['fecha_salida_transporte'])
+        return ModelViewSet.create(self, request, *args, **kwargs)
 
+    def _normalizar_fecha(self, fecha):
+        fecha = datetime.datetime.strptime(fecha, "%d-%m-%Y").date()
+        return fecha.strftime('%Y%m%d')
+    
     
 class CTGViewSet(ModelViewSet):
     serializer_class = CTGSerializer

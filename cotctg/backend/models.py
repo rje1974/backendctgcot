@@ -8,7 +8,7 @@ from backend.constants import WSCTG_WSDL, CTG_ESTADO_GENERADO\
     , CTG_ESTADO_PENDIENTE, CTG_ESTADO_ANULADO,\
     CTG_ESTADO_ARRIBADO, CTG_ACCION_SOLICITAR, CTG_ACCION_PARCIAL,\
     COT_ESTADO_PENDIENTE, COT_ESTADO_GENERADO, CTG_ESTADO_ERROR, ARBA_MEDIDAS,\
-    ARBA_COMPROBANTES, ARBA_PROVINCIAS, COT_ESTADO_ERROR
+    ARBA_COMPROBANTES, COT_ESTADO_ERROR
 from backend.utils import obtener_afip_token
 from backend.clients import get_wscot_client, get_wsctg_client
 import json
@@ -26,7 +26,8 @@ class Credencial(models.Model):
     '''
     Representa las credenciales de autenticacion del usuario ante AFIP y ARBA
     '''
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='credenciales', null=True)
+    user = models.OneToOneField(User, related_name='credenciales')
+    alias = models.CharField('Nombre y Apellido', max_length=150, blank=True)
     usuario_arba = models.CharField('Usuario ARBA', max_length=12, blank=True)
     pass_arba = models.CharField('Contrasena ARBA', max_length=30, blank=True)
     cuit_solicitante = models.BigIntegerField('CUIT Solicitante', validators=[MaxValueValidator(99999999999)], null=True, blank=True)
@@ -98,16 +99,16 @@ class COT(models.Model):
     destinatario_cuit = models.BigIntegerField('Destinatario Cuit', validators=[MaxValueValidator(99999999999)], blank=True, null=True)
     destino_domicilio_calle = models.CharField('Destino: Calle de Domicilio', max_length=40)
     destino_domicilio_codigopostal = models.CharField('Destino: Codigo Postal', max_length=8)
-    destino_domicilio_localidad = models.CharField('Destino: Localidad', max_length=50)
-    destino_domicilio_provincia = models.CharField('Provincia Destino', max_length=1, choices=ARBA_PROVINCIAS)
+    destino_domicilio_localidad = models.ForeignKey('Localidad', verbose_name='Localidad de Destino', related_name='cot_localidad_destino')
+    destino_domicilio_provincia = models.ForeignKey('Provincia', verbose_name='Provincia de Destino', related_name='cot_provincia_destino', to_field='codigo_arba')
     entrega_domicilio_origen = models.CharField('Entrega Domicilio Origen', choices=SI_NO, max_length=2)
     origen_cuit = models.CharField('Origen CUIT', max_length=11)
     origen_razon_social = models.CharField('Origen: Razon Social', max_length=50)
     emisor_tenedor = models.BooleanField('Emisor es Tenedor')
     origen_domicilio_calle = models.CharField('Origen: Calle de Domicilio', max_length=40)
     origen_domicilio_codigopostal = models.CharField('Origen: Domicilio Codigo Postal', max_length=8)
-    origen_domicilio_localidad = models.CharField('Origen: Localidad', max_length=50)
-    origen_domicilio_provincia = models.CharField('Provincia Origen', max_length=1, choices=ARBA_PROVINCIAS)
+    origen_domicilio_localidad = models.ForeignKey('Localidad', verbose_name='Localidad de Origen', related_name='cot_localidad_origen')
+    origen_domicilio_provincia = models.ForeignKey('Provincia', verbose_name='Provincia de Origen', related_name='cot_provincia_origen', to_field='codigo_arba')
     transportista_cuit = models.CharField('CUIT Transportista', max_length=11)
     patente_vehiculo = models.CharField('Patente Vehiculo', max_length=7, blank=True, default=' ', null=True)
     producto_no_term_dev = models.BooleanField('Productos No Terminados / Devoluciones', default=False)
@@ -170,9 +171,9 @@ class COT(models.Model):
         registro02 += ' |' # DESTINO_DOMICILIO_PISO
         registro02 += ' |' # DESTINO_DOMICILIO_DTO
         registro02 += ' |' # DESTINO_DOMICILIO_BARRIO
-        registro02 += '{}|'.format(self.destino_domicilio_codigopostal) 
-        registro02 += '{}|'.format(self.destino_domicilio_localidad)
-        registro02 += '{}|'.format(self.destino_domicilio_provincia)
+        registro02 += '{}|'.format(self.destino_domicilio_codigopostal)
+        registro02 += '{}|'.format(self.destino_domicilio_localidad.nombre)
+        registro02 += '{}|'.format(self.destino_domicilio_provincia.codigo_arba)
         registro02 += ' |' # PROPIO_DESTINO_DOMICILIO_CODIGO
         registro02 += '{}|'.format(self.entrega_domicilio_origen)
         registro02 += '{}|'.format(self.origen_cuit)
@@ -185,8 +186,8 @@ class COT(models.Model):
         registro02 += ' |' # ORIGEN_DOMICILIO_DTO
         registro02 += ' |' # ORIGEN_DOMICILIO_BARRIO
         registro02 += '{}|'.format(self.origen_domicilio_codigopostal)
-        registro02 += '{}|'.format(self.origen_domicilio_localidad)
-        registro02 += '{}|'.format(self.origen_domicilio_provincia)
+        registro02 += '{}|'.format(self.origen_domicilio_localidad.nombre)
+        registro02 += '{}|'.format(self.origen_domicilio_provincia.codigo_arba)
         registro02 += '{}|'.format(self.transportista_cuit)
         registro02 += ' |' # TIPO_RECORRIDO
         registro02 += ' |' # RECORRIDO_LOCALIDAD
@@ -406,7 +407,7 @@ class CTG(models.Model):
     def procesar_errores(self, afip_errors):
         ret = []
         for error in afip_errors:
-            ret.append(str(error.replace('<br>', '\n')))
+            ret.append(unicode(error.replace('<br>', '\n')))
         return ret
     
     class Meta:
@@ -475,6 +476,7 @@ class Establecimiento(models.Model):
         
 class Provincia(models.Model):
     codigo = models.PositiveIntegerField('Codigo', primary_key=True)
+    codigo_arba = models.CharField('Codigo ARBA', max_length=1, unique=True)
     nombre = models.CharField('Descripcion', max_length=100)
     
     def __unicode__(self):

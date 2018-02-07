@@ -9,5 +9,7 @@ encoding//backend/migrations/0006_auto_20171019_2110.py=utf-8
 encoding//backend/migrations/0007_auto_20171019_2132.py=utf-8
 encoding//backend/migrations/0008_auto_20171019_2140.py=utf-8
 encoding//backend/migrations/0009_auto_20171029_1806.py=utf-8
+encoding//backend/migrations/0010_auto_20180115_0134.py=utf-8
+encoding//backend/migrations/0011_auto_20180115_0147.py=utf-8
 encoding//backend/models.py=utf-8
 encoding//backend/views.py=utf-8

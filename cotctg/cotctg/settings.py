@@ -30,7 +30,7 @@ SITE_ID = 1
 # Credenciales AFIP
 AFIP_CERT = os.path.join(BASE_DIR, 'data/cert/ctgapp_7fada6e01ca86622.crt')
 AFIP_KEY = os.path.join(BASE_DIR, 'data/cert/ctgapp.key')
-AFIP_HOMO = False
+AFIP_HOMO = True
 AFIP_CLIENT_DEBUG = True
 
 # Application definition

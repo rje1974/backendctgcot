@@ -9,6 +9,7 @@ from backend.models import Localidad, Provincia, CTG, Entidad, Cosecha, Especie,
 from backend.constants import CTG_ACCION_SOLICITAR
 from rest_framework_friendly_errors.mixins import FriendlyErrorMessagesMixin
 from rest_framework.exceptions import ValidationError
+from rest_framework import fields
 
 
 class ProvinciaSerializer(ModelSerializer):
@@ -34,14 +35,30 @@ class LocalidadSerializer(ModelSerializer):
 
 
 class CredencialSerializer(ModelSerializer):
+    alias = fields.CharField(required=False, allow_blank=True)
+    usuario_arba = fields.CharField(required=False, allow_blank=True)
+    pass_arba = fields.CharField(required=False, allow_blank=True)
+    cuit_solicitante = fields.IntegerField(allow_null=True)
+    user = fields.ReadOnlyField()
+    
     class Meta:
         model = Credencial
         exclude = ('credenciales_produccion',)
 
 
 class COTSerializer(FriendlyErrorMessagesMixin, ModelSerializer):
+#     origen_domicilio_provincia = fields.CharField(source='')
+#     destino_domicilio_provincia = fields.CharField()
+#     
+#     def get_origen_domicilio_provincia(self, instance):
+#         return instance.codigo_arba
+#     
+#     def get_destino_domicilio_provincia(self, instance):
+#         return instance.codigo_arba
+    
     class Meta:
         model = COT
+#         fields = ('origen_domicilio_provincia', 'destino_domicilio_provincia', '__all__',)
         exclude = ('file_path',)
 
     def create(self, validated_data):

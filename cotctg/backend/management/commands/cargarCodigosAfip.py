@@ -4,7 +4,7 @@ Created on 31 ago. 2017
 @author: root
 '''
 from django.core.management.base import BaseCommand
-from backend.constants import CUIT_SOLICITANTE
+from backend.constants import CUIT_SOLICITANTE, ARBA_PROVINCIAS
 from backend.models import Cosecha, Especie, Establecimiento, Provincia,\
     Localidad
 from backend.utils import obtener_afip_token
@@ -13,6 +13,33 @@ from backend.clients import get_wsctg_client
 
 class Command(BaseCommand):
     help = 'Carga toda la informacion correspondiente a Codigos de Localidades, Provincias, Cosechas, Especies, etc'
+
+    PROVINCIAS_ARBA = {
+        24: 'V',
+        23: 'Z',
+        22: 'R',
+        21: 'L',
+        20: 'Q',
+        19: 'N',
+        18: 'P',
+        17: 'U',
+        16: 'H',
+        14: 'T',
+        13: 'G',
+        12: 'S',
+        11: 'D',
+        10: 'J',
+        9: 'A',
+        8: 'F',
+        7: 'M',
+        6: 'Y',
+        5: 'E',
+        4: 'W',
+        3: 'X',
+        2: 'K',
+        1: 'B'
+        }
+        
 
     def handle(self, *args, **options):
         self.stdout.write('Conectando a WS AFIP')
@@ -63,7 +90,9 @@ class Command(BaseCommand):
             provincia = provincia.split(sep)
             codigo = provincia[1].strip()
             nombre = provincia[2].strip()
-            obj_provincia = Provincia.objects.create(codigo=codigo, nombre=nombre)
+            obj_provincia = Provincia.objects.create(codigo=codigo, 
+                                                     nombre=nombre,
+                                                     codigo_arba=self.PROVINCIAS_ARBA[codigo])
             localidades = wsctg.ConsultarLocalidadesPorProvincia(codigo_provincia=codigo, sep=sep)
             for localidad in localidades:
                 localidad = localidad.split(sep)

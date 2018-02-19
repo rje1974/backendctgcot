@@ -5,7 +5,7 @@ Created on 6 sep. 2017
 '''
 from rest_framework.serializers import ModelSerializer
 from backend.models import Localidad, Provincia, CTG, Entidad, Cosecha, Especie,\
-    Establecimiento, COT, Credencial
+    Establecimiento, COT, Perfil
 from backend.constants import CTG_ACCION_SOLICITAR
 from rest_framework_friendly_errors.mixins import FriendlyErrorMessagesMixin
 from rest_framework.exceptions import ValidationError
@@ -34,15 +34,15 @@ class LocalidadSerializer(ModelSerializer):
         return rep 
 
 
-class CredencialSerializer(ModelSerializer):
+class PerfilSerializer(ModelSerializer):
     alias = fields.CharField(required=False, allow_blank=True)
     usuario_arba = fields.CharField(required=False, allow_blank=True)
     pass_arba = fields.CharField(required=False, allow_blank=True)
     cuit_solicitante = fields.IntegerField(allow_null=True)
-    user = fields.ReadOnlyField()
+#     user = fields.ReadOnlyField()
     
     class Meta:
-        model = Credencial
+        model = Perfil
         exclude = ('credenciales_produccion',)
 
 

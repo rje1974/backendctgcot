@@ -22,7 +22,7 @@ def user_directory_path(instance, filename):
     return 'user_{0}/{1}'.format(instance.usuario.id, filename)
 
 
-class Credencial(models.Model):
+class Perfil(models.Model):
     '''
     Representa las credenciales de autenticacion del usuario ante AFIP y ARBA
     '''
@@ -32,6 +32,7 @@ class Credencial(models.Model):
     pass_arba = models.CharField('Contrasena ARBA', max_length=30, blank=True)
     cuit_solicitante = models.BigIntegerField('CUIT Solicitante', validators=[MaxValueValidator(99999999999)], null=True, blank=True)
     credenciales_produccion = models.BooleanField('Credenciales en Produccion', default=True)
+    afip_habilitado = models.BooleanField('Servicios AFIP habilitados ?', default=False)
     
     def __unicode__(self):
         return "Credenciales de {}".format(self.user)
@@ -224,6 +225,7 @@ class COT(models.Model):
         
     def solicitar_cot(self):
         self.generar_archivo()
+        # TODO: Utilizar las credenciales provistas por el usuario
         cot = get_wscot_client('20244416722', '431108')
         cot.Conectar()
         cot.PresentarRemito(self.file_path)

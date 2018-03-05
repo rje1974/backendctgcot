@@ -9,7 +9,7 @@ from backend.models import Localidad, Provincia, CTG, Entidad, Cosecha, Especie,
 from backend.constants import CTG_ACCION_SOLICITAR
 from rest_framework_friendly_errors.mixins import FriendlyErrorMessagesMixin
 from rest_framework.exceptions import ValidationError
-from rest_framework import fields
+from rest_framework import fields, serializers
 
 
 class ProvinciaSerializer(ModelSerializer):
@@ -64,7 +64,7 @@ class COTSerializer(FriendlyErrorMessagesMixin, ModelSerializer):
     def create(self, validated_data):
         obj = COT.objects.create(**validated_data)
         if validated_data.get('generar_cot'):
-            obj.solicitar_cot()
+            obj.solicitar_cot(self.request.user)
         return obj
     
     def validate(self, data):
@@ -94,6 +94,9 @@ class COTSerializer(FriendlyErrorMessagesMixin, ModelSerializer):
         
         
 class CTGSerializer(FriendlyErrorMessagesMixin, ModelSerializer):
+    codigo_provincia_origen = serializers.CharField(source='codigo_localidad_origen.provincia.codigo')
+    codigo_provincia_destino = serializers.CharField(source='codigo_localidad_destino.provincia.codigo')
+    
     class Meta:
         model = CTG
         fields = '__all__'

@@ -15,6 +15,7 @@ import json
 from cotctg.settings import BASE_DIR
 import os
 from django.core.validators import MaxValueValidator
+from base64 import b64decode
 
 
 def user_directory_path(instance, filename):
@@ -24,9 +25,9 @@ def user_directory_path(instance, filename):
 
 class Perfil(models.Model):
     '''
-    Representa las credenciales de autenticacion del usuario ante AFIP y ARBA
+    Representa el perfil del usuario
     '''
-    user = models.OneToOneField(User, related_name='credenciales')
+    user = models.OneToOneField(User, related_name='perfil')
     alias = models.CharField('Nombre y Apellido', max_length=150, blank=True)
     usuario_arba = models.CharField('Usuario ARBA', max_length=12, blank=True)
     pass_arba = models.CharField('Contrasena ARBA', max_length=30, blank=True)
@@ -35,11 +36,11 @@ class Perfil(models.Model):
     afip_habilitado = models.BooleanField('Servicios AFIP habilitados ?', default=False)
     
     def __unicode__(self):
-        return "Credenciales de {}".format(self.user)
+        return "Perfil de {}".format(self.user)
     
     class Meta:
-        verbose_name = 'Credenciales'
-        verbose_name_plural = 'Credenciales'
+        verbose_name = 'Perfil'
+        verbose_name_plural = 'Perfiles'
 
 
 class Entidad(models.Model):
@@ -223,10 +224,14 @@ class COT(models.Model):
         errores = errores.replace('inv??lido', 'inválido') 
         return errores
         
-    def solicitar_cot(self):
+    def solicitar_cot(self, usuario):
         self.generar_archivo()
         # TODO: Utilizar las credenciales provistas por el usuario
-        cot = get_wscot_client('20244416722', '431108')
+        # cot = get_wscot_client('20244416722', '431108')
+        usuario_arba = usuario.perfil.usuario_arba
+        pass_arba = b64decode(usuario.perfil.pass_arba)
+        print pass_arba
+        cot = get_wscot_client(usuario_arba, pass_arba)
         cot.Conectar()
         cot.PresentarRemito(self.file_path)
         self.numero_comprobante = cot.NumeroComprobante
@@ -362,7 +367,7 @@ class CTG(models.Model):
             self.estado = CTG_ESTADO_GENERADO
     
     def solicitar_ctg(self):
-        #return self._simular_ctg()
+        return self._simular_ctg()
         
         token = obtener_afip_token()
         wsctg = get_wsctg_client()
@@ -508,7 +513,7 @@ class Localidad(models.Model):
 def solicitar_ctg_inicial(**kwargs):
     pass
     obj = kwargs['instance']
-    token = obj.usuario_solicitante.credenciales.obtener_afip_token()
+    token = obj.usuario_solicitante.perfil.obtener_afip_token()
     wsctg = WSCTG()
     wsctg.HOMO = HOMO
     wsctg.WSDL = WSCTG_WSDL

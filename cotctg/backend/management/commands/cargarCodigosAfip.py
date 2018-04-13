@@ -5,7 +5,7 @@ Created on 31 ago. 2017
 '''
 from django.core.management.base import BaseCommand
 from backend.constants import CUIT_SOLICITANTE, ARBA_PROVINCIAS
-from backend.models import Cosecha, Especie, Establecimiento, Provincia,\
+from backend.models import Cosecha, Especie, Establecimiento, Provincia, \
     Localidad
 from backend.utils import obtener_afip_token
 from backend.clients import get_wsctg_client
@@ -40,7 +40,6 @@ class Command(BaseCommand):
         '1': 'B',
         '0': 'C'
         }
-        
 
     def handle(self, *args, **options):
         self.stdout.write('Conectando a WS AFIP')
@@ -93,7 +92,7 @@ class Command(BaseCommand):
             nombre = provincia[2].strip()
             codigo_arba = self.PROVINCIAS_ARBA[codigo]
             print "Codigo afip: {}, codigo arba: {}, nombre: {}".format(codigo, codigo_arba, nombre)
-            obj_provincia = Provincia.objects.create(codigo=codigo, 
+            obj_provincia = Provincia.objects.create(codigo=codigo,
                                                      nombre=nombre,
                                                      codigo_arba=codigo_arba)
             localidades = wsctg.ConsultarLocalidadesPorProvincia(codigo_provincia=codigo, sep=sep)

@@ -5,9 +5,9 @@ from django.db import models
 from .constants import HOMO, CUIT_SOLICITANTE
 from django.utils import timezone
 from backend.constants import WSCTG_WSDL, CTG_ESTADO_GENERADO\
-    , CTG_ESTADO_PENDIENTE, CTG_ESTADO_ANULADO,\
-    CTG_ESTADO_ARRIBADO, CTG_ACCION_SOLICITAR, CTG_ACCION_PARCIAL,\
-    COT_ESTADO_PENDIENTE, COT_ESTADO_GENERADO, CTG_ESTADO_ERROR, ARBA_MEDIDAS,\
+    , CTG_ESTADO_PENDIENTE, CTG_ESTADO_ANULADO, \
+    CTG_ESTADO_ARRIBADO, CTG_ACCION_SOLICITAR, CTG_ACCION_PARCIAL, \
+    COT_ESTADO_PENDIENTE, COT_ESTADO_GENERADO, CTG_ESTADO_ERROR, ARBA_MEDIDAS, \
     ARBA_COMPROBANTES, COT_ESTADO_ERROR
 from backend.utils import obtener_afip_token
 from backend.clients import get_wscot_client, get_wsctg_client
@@ -62,7 +62,6 @@ class Entidad(models.Model):
         verbose_name_plural = 'Entidades'
         
         
-        
 class COT(models.Model):
     '''
     Representa un Codigo de Operacion Traslado/Transporte
@@ -77,7 +76,7 @@ class COT(models.Model):
         (COT_ESTADO_GENERADO, 'Generado'),
     )
     
-    SUJETO_GENERADOR =(
+    SUJETO_GENERADOR = (
             ('E', 'Emisor'),
             ('D', 'Destinatario')
         )
@@ -150,7 +149,6 @@ class COT(models.Model):
         else:
             return '0'
         
-        
     def generar_archivo(self):
 #         registro02 = '02|20080124|91 R999900068148|20080124| |E|0| | |30682115722|COMPUMUNDOS.A.|0|Ruta Prov | |S/N| | | |1200|PUERTO DE ESCOBAR|B| |NO|23246414254|COMPUMUNDO S.A.|0|San Martin 5797| |S/N| | | |1766|TABLADA|B|20045162673| | | | | | |1|1234\r\n'.format()
 #         registro02 += '0| | |30682115722|COMPUMUNDOS.A.|0|Ruta Prov | |S/N| | | |1200|PUERTO DE ESCOBAR|B| |NO|23246414254|COMPUMUNDO S.A.|0|San Martin 5797| |S/N| | | |1766|TABLADA|B|20045162673| | | | | | |1|1234\r\n'.format()
@@ -159,44 +157,44 @@ class COT(models.Model):
         registro02 = '02|{}|'.format(self.fecha_emision)
         registro02 += '{}{}|'.format(self.tipo_comprobante, self.nro_comprobante)
         registro02 += '{}|'.format(self.fecha_salida_transporte)
-        registro02 += ' |' # HORA_SALIDA_TRANSPORTE  
+        registro02 += ' |'  # HORA_SALIDA_TRANSPORTE  
         registro02 += '{}|'.format(self.sujeto_generador)
         registro02 += '{}|'.format(self._procesar_booleanos(self.destinatario_consumidor_final))
-        registro02 += ' |' # DESTINATARIO_TIPO_DOCUMENT
-        registro02 += ' |' # DESTINATARIO_DOCUMENTO
+        registro02 += ' |'  # DESTINATARIO_TIPO_DOCUMENT
+        registro02 += ' |'  # DESTINATARIO_DOCUMENTO
         registro02 += '{}|'.format(self._procesar_condicionales(self.destinatario_cuit))
         registro02 += '{}|'.format(self._procesar_condicionales(self.destinatario_razon_social))
         registro02 += '{}|'.format(self._procesar_booleanos(self.destinatario_tenedor))
         registro02 += '{}|'.format(self.destino_domicilio_calle)
-        registro02 += '0|' # DESTINO_DOMICILIO_NUMERO
-        registro02 += 'S/N|' # DESTINO_DOMICILIO_COMPLE
-        registro02 += ' |' # DESTINO_DOMICILIO_PISO
-        registro02 += ' |' # DESTINO_DOMICILIO_DTO
-        registro02 += ' |' # DESTINO_DOMICILIO_BARRIO
+        registro02 += '0|'  # DESTINO_DOMICILIO_NUMERO
+        registro02 += 'S/N|'  # DESTINO_DOMICILIO_COMPLE
+        registro02 += ' |'  # DESTINO_DOMICILIO_PISO
+        registro02 += ' |'  # DESTINO_DOMICILIO_DTO
+        registro02 += ' |'  # DESTINO_DOMICILIO_BARRIO
         registro02 += '{}|'.format(self.destino_domicilio_codigopostal)
         registro02 += '{}|'.format(self.destino_domicilio_localidad.nombre)
         registro02 += '{}|'.format(self.destino_domicilio_provincia.codigo_arba)
-        registro02 += ' |' # PROPIO_DESTINO_DOMICILIO_CODIGO
+        registro02 += ' |'  # PROPIO_DESTINO_DOMICILIO_CODIGO
         registro02 += '{}|'.format(self.entrega_domicilio_origen)
         registro02 += '{}|'.format(self.origen_cuit)
         registro02 += '{}|'.format(self.origen_razon_social)
         registro02 += '{}|'.format(self._procesar_booleanos(self.emisor_tenedor))
         registro02 += '{}|'.format(self.origen_domicilio_calle)
-        registro02 += '0|' # ORIGEN_DOMICILIO_NUMERO
-        registro02 += 'S/N|' # ORIGEN_DOMICILIO_COMPLE
-        registro02 += ' |' # ORIGEN_DOMICILIO_PISO
-        registro02 += ' |' # ORIGEN_DOMICILIO_DTO
-        registro02 += ' |' # ORIGEN_DOMICILIO_BARRIO
+        registro02 += '0|'  # ORIGEN_DOMICILIO_NUMERO
+        registro02 += 'S/N|'  # ORIGEN_DOMICILIO_COMPLE
+        registro02 += ' |'  # ORIGEN_DOMICILIO_PISO
+        registro02 += ' |'  # ORIGEN_DOMICILIO_DTO
+        registro02 += ' |'  # ORIGEN_DOMICILIO_BARRIO
         registro02 += '{}|'.format(self.origen_domicilio_codigopostal)
         registro02 += '{}|'.format(self.origen_domicilio_localidad.nombre)
         registro02 += '{}|'.format(self.origen_domicilio_provincia.codigo_arba)
         registro02 += '{}|'.format(self.transportista_cuit)
-        registro02 += ' |' # TIPO_RECORRIDO
-        registro02 += ' |' # RECORRIDO_LOCALIDAD
-        registro02 += ' |' # RECORRIDO_CALLE
-        registro02 += ' |' # RECORRIDO_RUTA
+        registro02 += ' |'  # TIPO_RECORRIDO
+        registro02 += ' |'  # RECORRIDO_LOCALIDAD
+        registro02 += ' |'  # RECORRIDO_CALLE
+        registro02 += ' |'  # RECORRIDO_RUTA
         registro02 += '{}|'.format(self._procesar_condicionales(self.patente_vehiculo))
-        registro02 += ' |' # PATENTE_ACOPLADO
+        registro02 += ' |'  # PATENTE_ACOPLADO
         registro02 += '{}|'.format(self._procesar_booleanos(self.producto_no_term_dev))
         registro02 += '{}\r\n'.format(self._procesar_condicionales(self.importe))
         
@@ -208,7 +206,7 @@ class COT(models.Model):
         registro03 += '{}|'.format(self.propio_descripcion_unidad_medida)
         registro03 += '{}\r\n'.format(self.cantidad_ajustada)
         
-        registro04 = '04|1\r\n' # Cantidad total de remitos
+        registro04 = '04|1\r\n'  # Cantidad total de remitos
         
         file_name = 'TB_{}_000000_{}_000001.txt'.format(self.cuit_empresa, self.fecha_emision)
         self.file_path = os.path.join(BASE_DIR, 'data/arba', file_name)
@@ -224,12 +222,10 @@ class COT(models.Model):
         errores = errores.replace('inv??lido', 'inválido') 
         return errores
         
-    def solicitar_cot(self, usuario):
+    def solicitar_cot(self):
         self.generar_archivo()
-        # TODO: Utilizar las credenciales provistas por el usuario
-        # cot = get_wscot_client('20244416722', '431108')
-        usuario_arba = usuario.perfil.usuario_arba
-        pass_arba = b64decode(usuario.perfil.pass_arba)
+        usuario_arba = self.usuario_solicitante.perfil.usuario_arba
+        pass_arba = b64decode(self.usuario_solicitante.perfil.pass_arba)
         print pass_arba
         cot = get_wscot_client(usuario_arba, pass_arba)
         cot.Conectar()
@@ -257,8 +253,7 @@ class COT(models.Model):
     class Meta:
         verbose_name = 'COT'
         verbose_name_plural = 'COTs'
-    
-    
+        ordering = ('-id')
 
 class CTG(models.Model):
     '''
@@ -279,15 +274,15 @@ class CTG(models.Model):
     numero_carta_de_porte = models.CharField('*Nro Carta de Porte', max_length=12, blank=True, null=True, unique=True)
     codigo_especie = models.ForeignKey('Especie', verbose_name='*Codigo Especie', blank=True, null=True)
     cuit_remitente = models.ForeignKey(Entidad, verbose_name='Cuit Remitente Comercial', related_name='ctg_remitente', blank=True, null=True)
-    #cuit_remitente = models.CharField('Cuit Remitente Comercial', max_length=11, null=True, blank=True)
+    # cuit_remitente = models.CharField('Cuit Remitente Comercial', max_length=11, null=True, blank=True)
     remitente_comercial_como_canjeador = models.BooleanField('Rte Comercial actua como Canjeador?', default=False)
     remitente_comercial_como_productor = models.BooleanField('Rte Comercial actua como Productor?', default=False)
     cuit_destino = models.ForeignKey(Entidad, verbose_name='*Cuit Destino', related_name='ctg_destino', blank=True, null=True)
-    #cuit_destino = models.CharField('*Cuit Destino', max_length=11, null=True, blank=True)
+    # cuit_destino = models.CharField('*Cuit Destino', max_length=11, null=True, blank=True)
     cuit_destinatario = models.ForeignKey(Entidad, verbose_name='*Cuit Destinatario', related_name='ctg_destinatario', blank=True, null=True)
-    #cuit_destinatario = models.CharField('*Cuit Destinatario', max_length=11, null=True, blank=True)
+    # cuit_destinatario = models.CharField('*Cuit Destinatario', max_length=11, null=True, blank=True)
     cuit_transportista = models.ForeignKey(Entidad, verbose_name='Cuit Tranportista', blank=True, null=True, related_name='ctg_transportista')
-    #cuit_transportista = models.CharField('*Cuit Transportista', max_length=11, null=True, blank=True) 
+    # cuit_transportista = models.CharField('*Cuit Transportista', max_length=11, null=True, blank=True) 
     cuit_corredor = models.ForeignKey(Entidad, verbose_name='Cuit Corredor', blank=True, null=True, related_name='ctg_corredor')
     codigo_localidad_origen = models.ForeignKey('Localidad', verbose_name='*Codigo Localidad Origen', related_name='ctg_localidad_origen', blank=True, null=True)
     codigo_localidad_destino = models.ForeignKey('Localidad', verbose_name='*Codigo Localidad Destino', related_name='ctg_localidad_destino', blank=True, null=True)
@@ -296,8 +291,8 @@ class CTG(models.Model):
     cant_horas = models.PositiveIntegerField('Cantidad de Horas', blank=True, null=True)
     patente_vehiculo = models.CharField('*Patente Vehiculo', max_length=30, blank=True, null=True)
     km_a_recorrer = models.PositiveIntegerField('*Km a Recorrer', blank=True, null=True)
-    #remitente_comercial_como_canjeador = models.CharField('Remitente comercial Canjeador', max_length=100, blank=True) 
-    #remitente_comercial_como_productor = models.CharField('Remitente comercial Canjeador', max_length=100, blank=True) 
+    # remitente_comercial_como_canjeador = models.CharField('Remitente comercial Canjeador', max_length=100, blank=True) 
+    # remitente_comercial_como_productor = models.CharField('Remitente comercial Canjeador', max_length=100, blank=True) 
     turno = models.CharField('Turno', max_length=50, blank=True, null=True)
     estado = models.IntegerField('Estado del CTG', choices=CTG_ESTADO, default=1, blank=True, null=True)
     geolocalizacion = models.CharField('Geo Localizacion de la Solicitud', blank=True, max_length=150)
@@ -381,22 +376,22 @@ class CTG(models.Model):
         remitente_comercial_como_canjeador = cuit_canjeador = cuit_remitente if self.remitente_comercial_como_canjeador else None 
         remitente_comercial_como_productor = cuit_canjeador = cuit_remitente if self.remitente_comercial_como_productor else None 
         
-        numero_ctg = wsctg.SolicitarCTGInicial(self.numero_carta_de_porte, 
+        numero_ctg = wsctg.SolicitarCTGInicial(self.numero_carta_de_porte,
                                               self.codigo_especie.codigo,
-                                              cuit_canjeador, 
-                                              self.cuit_destino.cuit, 
-                                              self.cuit_destinatario.cuit, 
-                                              self.codigo_localidad_origen.codigo, 
-                                              self.codigo_localidad_destino.codigo, 
-                                              self.codigo_cosecha.codigo, 
-                                              self.peso_neto_carga, 
-                                              self.cant_horas, 
-                                              self.patente_vehiculo, 
-                                              cuit_transportista, 
-                                              self.km_a_recorrer, 
-                                              remitente_comercial_como_canjeador, 
-                                              cuit_corredor, 
-                                              remitente_comercial_como_productor, 
+                                              cuit_canjeador,
+                                              self.cuit_destino.cuit,
+                                              self.cuit_destinatario.cuit,
+                                              self.codigo_localidad_origen.codigo,
+                                              self.codigo_localidad_destino.codigo,
+                                              self.codigo_cosecha.codigo,
+                                              self.peso_neto_carga,
+                                              self.cant_horas,
+                                              self.patente_vehiculo,
+                                              cuit_transportista,
+                                              self.km_a_recorrer,
+                                              remitente_comercial_como_canjeador,
+                                              cuit_corredor,
+                                              remitente_comercial_como_productor,
                                               self.turno)
         self.numero_ctg = numero_ctg
         self.observaciones = wsctg.Observaciones
@@ -420,6 +415,7 @@ class CTG(models.Model):
     class Meta:
         verbose_name = 'CTG'
         verbose_name_plural = 'CTGs'
+        ordering = ('-id')
         
     
 class Operacion(models.Model):
@@ -505,7 +501,6 @@ class Localidad(models.Model):
     class Meta:
         verbose_name = 'Localidad'
         verbose_name_plural = 'Localidades'
-        
         
     
 '''

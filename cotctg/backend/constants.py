@@ -3,7 +3,7 @@ from cotctg.settings import AFIP_HOMO
 # Constantes WebService AFIP
 
 CUIT_SOLICITANTE = 20244416722
-#CUIT_SOLICITANTE = 30552651282
+# CUIT_SOLICITANTE = 30552651282
 '''
 TODO:
 Al ingresar otro CUIT Solicitante que no sea 20244416722, recibo el mensaje:
@@ -12,9 +12,7 @@ La CUIT del usuario representante 20244416722 no corresponde a una CUIT habilita
 
 '''
 
-
 CACERT = 'afip_ca_info.crt'
-
 
 if AFIP_HOMO:
     # AFIP Homologacion (ambiente de pruebas)
@@ -28,8 +26,6 @@ else:
     WSAA_WSDL = "https://wsaa.afip.gov.ar/ws/services/LoginCms?wsdl"
     WSAA_URL = "https://wsaa.afip.gov.ar/ws/services/LoginCms"
     HOMO = AFIP_HOMO
-
-
 
 # Constantes de modelos de ddtos
 # ESTADOS CTG
@@ -51,7 +47,6 @@ CTG_ACCION_SOLICITAR = 2
 # ACCIONES COT
 COT_ACCION_SOLICTAR = 1
 
-
 # Tablas ARBA
 
 ARBA_MEDIDAS = (
@@ -61,7 +56,7 @@ ARBA_MEDIDAS = (
     (4, 'Metros Cuadrados'),
     (5, 'Metros'),
     (6, 'Metros Cubicos'),
-    (7, 'Pares'),        
+    (7, 'Pares'),
 )
 
 ARBA_PROVINCIAS = (

@@ -3,7 +3,7 @@ from __future__ import unicode_literals
 
 from django.contrib import admin
 from .models import Entidad, Perfil, CTG
-from .models import Especie, Cosecha, Localidad, Establecimiento,\
+from .models import Especie, Cosecha, Localidad, Establecimiento, \
     Provincia
 from backend.models import Operacion, COT
 

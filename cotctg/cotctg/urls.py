@@ -17,10 +17,9 @@ from django.conf.urls import url, include
 from django.contrib import admin
 from backend.views import GoogleLogin
 from rest_framework import routers
-from backend.viewsets import CTGViewSet, LocalidadViewSet, EntidadViewSet,\
-    CosechaViewSet, EspecieViewSet, EstablecimientoViewSet, OperacionViewSet,\
-    COTViewSet, PerfilViewSet
-
+from backend.viewsets import (CTGViewSet, LocalidadViewSet, EntidadViewSet,
+    CosechaViewSet, EspecieViewSet, EstablecimientoViewSet, OperacionViewSet,
+    COTViewSet, PerfilViewSet)
 
 router = routers.DefaultRouter()
 router.register('ctg', CTGViewSet, base_name='ctg')
@@ -33,7 +32,6 @@ router.register('establecimientos', EstablecimientoViewSet, base_name='estableci
 router.register('operaciones', OperacionViewSet, base_name='operaciones')
 router.register('perfil', PerfilViewSet, base_name='perfil')
 
-
 urlpatterns = [
     url(r'^rest/', include(router.urls)),
     url(r'^admin/', admin.site.urls),
@@ -41,4 +39,4 @@ urlpatterns = [
     url(r'^rest-auth/registration/', include('rest_auth.registration.urls')),
     url(r'^rest-auth/google/$', GoogleLogin.as_view(), name='google_login'),
 ]
-#urlpatterns += staticfiles_urlpatterns()
+# urlpatterns += staticfiles_urlpatterns()

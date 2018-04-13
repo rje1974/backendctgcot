@@ -29,13 +29,13 @@ class Command(BaseCommand):
             self._export_query(model.__name__, source_list)    
             source_list = []
         
-        prov_list=[]
+        prov_list = []
         for provincia in Provincia.objects.all():
             _dict['code'] = provincia.codigo
             _dict['searchStr'] = provincia.nombre
             prov_list.append(_dict)
             
-            loc_list=[]
+            loc_list = []
             for obj in Localidad.objects.filter(provincia=provincia):
                 _dict = {}
                 _dict['code'] = obj.codigo

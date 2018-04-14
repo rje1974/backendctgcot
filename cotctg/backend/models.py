@@ -253,7 +253,7 @@ class COT(models.Model):
     class Meta:
         verbose_name = 'COT'
         verbose_name_plural = 'COTs'
-        ordering = ('-id')
+        ordering = ('-id',)
 
 class CTG(models.Model):
     '''
@@ -415,7 +415,7 @@ class CTG(models.Model):
     class Meta:
         verbose_name = 'CTG'
         verbose_name_plural = 'CTGs'
-        ordering = ('-id')
+        ordering = ('-id',)
         
     
 class Operacion(models.Model):

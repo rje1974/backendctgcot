@@ -19,7 +19,7 @@ from backend.views import GoogleLogin
 from rest_framework import routers
 from backend.viewsets import (CTGViewSet, LocalidadViewSet, EntidadViewSet,
     CosechaViewSet, EspecieViewSet, EstablecimientoViewSet, OperacionViewSet,
-    COTViewSet, PerfilViewSet)
+    COTViewSet, PerfilViewSet, ValidarCuit)
 
 router = routers.DefaultRouter()
 router.register('ctg', CTGViewSet, base_name='ctg')
@@ -38,5 +38,6 @@ urlpatterns = [
     url(r'^rest-auth/', include('rest_auth.urls')),
     url(r'^rest-auth/registration/', include('rest_auth.registration.urls')),
     url(r'^rest-auth/google/$', GoogleLogin.as_view(), name='google_login'),
+    url(r'^rest/validar_cuit/', ValidarCuit.as_view(), name='validar_cuit'),
 ]
 # urlpatterns += staticfiles_urlpatterns()

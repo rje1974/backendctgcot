@@ -11,7 +11,7 @@ from rest_framework_friendly_errors.mixins import FriendlyErrorMessagesMixin
 from rest_framework.exceptions import ValidationError
 from rest_framework import fields, serializers
 from datetime import datetime
-from backend.utils import obtener_fecha_frontend
+from backend.utils import obtener_fecha_frontend, validar_cuit
 
 
 class ProvinciaSerializer(ModelSerializer):
@@ -62,18 +62,13 @@ class COTSerializer(FriendlyErrorMessagesMixin, ModelSerializer):
     
     def get_fecha_salida_transporte(self, obj):
         return obtener_fecha_frontend(obj)
-    
-    class Meta:
-        model = COT
-#         fields = ('origen_domicilio_provincia', 'destino_domicilio_provincia', '__all__',)
-        exclude = ('file_path',)
 
     def create(self, validated_data):
         obj = COT.objects.create(**validated_data)
         if validated_data.get('generar_cot'):
             obj.solicitar_cot()
         return obj
-    
+
     def validate(self, data):
         """
         Aplica todas las validaciones necesarias para ARBA.
@@ -99,22 +94,60 @@ class COTSerializer(FriendlyErrorMessagesMixin, ModelSerializer):
             raise ValidationError('El valor del importe debe ser mayor a 0')
         return data
         
+    def validate_cuit_empresa(self, value):
+        if not validar_cuit(value):
+            raise ValidationError(u"El CUIT de la Empresa no es valido")
         
+    def validate_destinatario_cuit(self, value):
+        if not validar_cuit(value):
+            raise ValidationError(u"El CUIT del Destinatario no es valido")
+        
+    def validate_origen_cuit(self, value):
+        if not validar_cuit(value):
+            raise ValidationError(u"El CUIT de Origen no es valido")
+        
+    def validate_transportista_cuit(self, value):
+        if not validar_cuit(value):
+            raise ValidationError(u"El CUIT del Transportista no es valido")
+        
+    class Meta:
+        model = COT
+        exclude = ('file_path',)
+        
+
 class CTGSerializer(FriendlyErrorMessagesMixin, ModelSerializer):
     codigo_provincia_origen = serializers.CharField(source='codigo_localidad_origen.provincia.codigo')
     codigo_provincia_destino = serializers.CharField(source='codigo_localidad_destino.provincia.codigo')
-    
-    class Meta:
-        model = CTG
-        fields = '__all__'
-        # exclude = ('usuario_solicitante',)
-        # depth = 2
+
+    def validate_cuit_remitente(self, value):
+        if not validar_cuit(value):
+            raise ValidationError(u"El CUIT del Remitente no es valido")
+
+    def validate_cuit_destino(self, value):
+        if not validar_cuit(value):
+            raise ValidationError(u"El CUIT de Destino no es valido")
+        
+    def validate_cuit_destinatario(self, value):
+        if not validar_cuit(value):
+            raise ValidationError(u"El CUIT del Destinatario no es valido")
+        
+    def validate_cuit_transportista(self, value):
+        if not validar_cuit(value):
+            raise ValidationError(u"El CUIT del Transportista no es valido")
+        
+    def validate_cuit_corredor(self, value):
+        if not validar_cuit(value):
+            raise ValidationError(u"El CUIT del Corredor no es valido")
 
     def create(self, validated_data):
         obj = CTG.objects.create(**validated_data)
         if validated_data.get('accion') == CTG_ACCION_SOLICITAR:
             obj.solicitar_ctg()
         return obj
+
+    class Meta:
+        model = CTG
+        fields = '__all__'
     
         
 class EntidadSerializer(FriendlyErrorMessagesMixin, ModelSerializer):

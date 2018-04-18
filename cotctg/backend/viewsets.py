@@ -4,15 +4,22 @@ Created on 6 sep. 2017
 @author: Hugo Chavero
 '''
 import datetime
-from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
-from backend.serializers import CTGSerializer, LocalidadSerializer,\
-    EntidadSerializer, CosechaSerializer, EspecieSerializer,\
-    EstablecimientoSerializer, CTGOperatiocionSerializer,\
-    COTOperatiocionSerializer, COTSerializer,PerfilSerializer
-from backend.models import CTG, Localidad, Entidad, Cosecha, Especie,\
-    Establecimiento, COT, Provincia, Perfil
+
+from django.http.response import JsonResponse
 from rest_framework.response import Response
+from rest_framework.views import APIView
+from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
+
 from backend.constants import CTG_ESTADO_PENDIENTE, CTG_ESTADO_GENERADO
+from backend.models import CTG, Localidad, Entidad, Cosecha, Especie, \
+    Establecimiento, COT, Provincia, Perfil
+from backend.serializers import CTGSerializer, LocalidadSerializer, \
+    EntidadSerializer, CosechaSerializer, EspecieSerializer, \
+    EstablecimientoSerializer, CTGOperatiocionSerializer, \
+    COTOperatiocionSerializer, COTSerializer, PerfilSerializer
+from backend.utils import validar_cuit
+from rest_framework.decorators import authentication_classes
+from rest_framework.permissions import AllowAny
 
 
 class COTViewSet(ModelViewSet):
@@ -193,3 +200,11 @@ class OperacionViewSet(ReadOnlyModelViewSet):
             resp_list.append(resp_obj)
         return Response(resp_list)
     
+
+class ValidarCuit(APIView):
+    
+    def get(self, request):
+        # En un futuro, se podria validar el CUIT/CUIL mediante un servicio
+        cuit = request.data.get('cuit')
+        if cuit:
+            return JsonResponse({'is_valid': validar_cuit(cuit)})
